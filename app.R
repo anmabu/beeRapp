@@ -6,7 +6,7 @@ library(ggplot2)
 library(openxlsx)
 library(shiny)
 
-if(interactive()){
+# if(interactive()){
 
 ui <- fluidPage(
     theme = bslib::bs_theme(bootswatch = "flatly"),
@@ -20,8 +20,9 @@ ui <- fluidPage(
             verbatimTextOutput("textfield"),
             # checkboxGroupInput("corr_variables", "Which variables do you want to plot?", "all"),
             uiOutput("selectlabels"),
-            actionButton("plot_selected", "plot!"),
-            plotOutput("plot", height=800),        
+            actionButton("plot_selected", "Plot"),
+            plotOutput("plot", height=800),
+            downloadButton("downloadcorr", "Download plot"),
             actionButton("page_21", "prev"),
             actionButton("page_23", "next")
         ),
@@ -67,6 +68,9 @@ server <- function(input, output, session) {
     }
     
     observeEvent(input$page_12, switch_page(2))
+    observeEvent(input$page_21, switch_page(1))
+    observeEvent(input$page_32, switch_page(2))
+    observeEvent(input$page_23, switch_page(3))
     
     output$selectlabels <- renderUI({
         checkboxGroupInput("selection", "Which data do you want to plot?", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
@@ -75,23 +79,32 @@ server <- function(input, output, session) {
     })
     output$datatable <- renderDataTable({
         select <- req(input$selection)
-        inputdata()[, c(paste0(select))] # rownames = T, colnames = T
+        inputdata()[, 1:ncol(inputdata())] # rownames = T, colnames = T
     })
-    observeEvent(input$plot_selected, 
-    output$plot <- renderPlot({
-        select <- req(input$selection)
+    plot_cormat <- function(selectedLabels){ 
+        # elect <- req(input$selection)
         # cormat <- rcorr(as.matrix(inputdata()[,1:ncol(inputdata())]), type = "pearson")
-        cormat <- rcorr(as.matrix(inputdata()[, c(paste0(select))]), type = "pearson")
+        cormat <- rcorr(as.matrix(inputdata()[, c(paste0(selectedLabels))]), type = "pearson")
         cormat_r <- cormat$r
         cormat_r[cormat$P > 0.05] <- 0
-        corrplot(cormat_r, tl.col = "black", tl.srt = 60, tl.cex = 0.6, mar = c(0,0,2,2))
-    }, res =96)
-    )
-      observeEvent(input$page_21, switch_page(1))
-    observeEvent(input$page_32, switch_page(2))
+        cormat_plot <- corrplot(cormat_r, tl.col = "black", tl.srt = 60, tl.cex = 0.6, mar = c(0,0,2,2))
+        return(cormat_plot)
+    }
     
-    observeEvent(input$page_23, switch_page(3))
-  
+    observeEvent(input$plot_selected, # plot_cormat(input$selection))
+        output$plot <- renderPlot({plot_cormat(input$selection)}, res = 96))
+    
+    output$downloadcorr <- downloadHandler( 
+        # opens pdf in new window on my machine and when exited, doesn't return to app
+        # works good, when run directly in a window. possibly something up with my settings
+        filename <- ("cormat.pdf"), 
+        content <- function(file) { 
+            # this might not work when running on shiny server
+            pdf(file, height = 10, width = 11, paper = "a4")
+            plot_cormat(input$selection)
+            dev.off()
+            })
+
     # output$plot <- renderPlot({
     #    plot(dataset())
     # }, res = 96)
@@ -99,4 +112,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-}
+# }
