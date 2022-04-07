@@ -209,6 +209,9 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
   }
   if (format == ".zip"){
     zip(zipfile = file, files = fs)
+    for (elem in fs){
+      system(paste("rm -f", elem)) 
+    }
   }
   if(format == ".pptx"){
     print(doc, target = file) 
