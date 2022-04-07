@@ -25,7 +25,7 @@ ui <- fluidPage(
       sidebarMenu(
         menuItem("Import Data", tabName = "importdata"), 
         menuItem("Analysis", tabName = "analysis", 
-                 menuSubItem("Correlation Matrices", tabName = "correlationmatrices"), 
+                 menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
                  menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations")
         )       
       )
@@ -64,9 +64,10 @@ ui <- fluidPage(
               selectInput("corrtype", "Select Correlation Type", choices = c("pearson")),# , "spearman", "kendall")),
               numericInput("thresholdvalue", "Choose Threshold", min = 0.001, max = 0.5, value = 0.05, step = 0.001),
               downloadButton("downpaircorr", "Download"),
-              div(style= "display:inline-block", radioButtons("dfpairmatrix", "", c(".pdf", ".pptx"), inline = TRUE))
+              div(style= "display:inline-block", radioButtons("dfpairmatrix", "", c(".pdf", ".pptx", ".zip"), inline = TRUE))
               # verbatimTextOutput("selected_format"),
-            
+              # make options to deselect Values
+              # output as Zip
             )
           ), 
           fluidRow(
@@ -211,25 +212,33 @@ server <- function(input, output, session) {
     })
     
     rundownpaircorr <- function(file, format, data_table, labels, type, threshold, grouping = NULL, color_groups = NULL, subset=NULL){
+      #Subset the input data frame and the labels data frame if a subset argument is provided
+      if(!is.null(subset)){
+        data_table <- data_table[,subset]
+        labels <- labels[subset,]
+      }
       #Determine the output format selected by the user 
       if(format == ".pdf"){
-        pdf(file, height=4.5, width = 5.5, paper = "a4")
+        pdf(file, height=4.5, width = 5.5)
       }
       if(format == ".pptx"){
         doc <- officer::read_pptx()
+      }
+      if(format == ".zip"){   
+        fs <- c()
       }
       # add progress bar
       progress <- shiny::Progress$new()
       on.exit(progress$close())
       progress$set(message = "Creating plots", value = 0)
       #Calculate the correlations and create the plots
-      for (i in 1:(ncol(data_table)-1)){
-      # for (i in 1:5){  
+      # for (i in 1:(ncol(data_table)-1)){
+      for (i in 1:5){  
       # move progress bar
-        progress$inc(1/(ncol(data_table)-1))
-        # progress$inc(1/5)
-        for (j in (i+1):ncol(data_table)){
-        # for (j in (i+1):5){
+        # progress$inc(1/(ncol(data_table)-1))
+        progress$inc(1/5)
+        # for (j in (i+1):ncol(data_table)){
+        for (j in (i+1):5){
           #Calculate correlations 
           p.val = stats::cor.test(data_table[,i], data_table[,j], method = type)$p.value
           r = round(stats::cor.test(data_table[,i], data_table[,j], method = type)$estimate,2)
@@ -276,12 +285,21 @@ server <- function(input, output, session) {
             # }
             # p = p+ ggplot2::annotate(geom = "text", x = xcoord, y = 1.2*ymax,
             #                         label=lab1, fontface=3, size=4.5)
+            if (format == ".zip"){
+              fs <- c(fs, paste0(labels$colnames[i], labels$colnames[j], ".pdf"))
+              pdf(paste0(labels$colnames[i], labels$colnames[j], ".pdf"), height = 4.5, width = 5.5)
+              print(p)
+              dev.off()
+            }
             if(format == ".pptx"){
               doc <- officer::add_slide(doc)
               doc <- officer::ph_with(x = doc, value = p, location =ph_location(type="body",width=6, height=4.5), res=600)
             } else {print(p)}
           }
         }
+      }
+      if (format == ".zip"){
+        zip(zipfile = file, files = fs)
       }
       if(format == ".pptx"){
         print(doc, target = file) 
@@ -297,10 +315,13 @@ server <- function(input, output, session) {
         if (input$dfpairmatrix == ".pptx"){
           name <- "pair_corr_plots.pptx" 
           return(name)
-        } else {
+        } else if (input$dfpairmatrix == ".pdf"){
           name <- "pair_corr_plots.pdf"
           return(name)
-        }
+        } else if(input$dfpairmatrix == ".zip"){
+          name <- "pair_corr_plots.zip"
+          return(name)
+        } 
       },
       content <- function(file) { 
         fileoutput <- reactive({ 
@@ -313,12 +334,14 @@ server <- function(input, output, session) {
         # id <- input$mouseID
         grouping <- NULL 
         color_groups <- NULL 
+        subset <- NULL
         # https://rstudio.github.io/promises/articles/casestudy.html
         # future_promise({
         # rundownpaircorr(file, format, data_table, labels, type, threshold)
         # }) %...>%
-        #   outputfiles()
-        rundownpaircorr(file)
+         # outputfiles()
+        pairwiseCorrelations(file, data_table, labels, format, type, threshold)
+        # rundownpaircorr(file, format, data_table, labels, type, threshold)
         # fileoutput <- callr::r_bg(func = rundownpaircorr, args=list(file, format, data_table, labels, type, threshold), supervise = TRUE)
         # fileoutput
         }
@@ -327,5 +350,5 @@ server <- function(input, output, session) {
       }
     )
 }
-
+# ?parallelly::supportsMulticore
 shinyApp(ui, server)
