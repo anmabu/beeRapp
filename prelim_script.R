@@ -114,10 +114,9 @@ correlationMatrix <- function(data_table, outDir,
 ##############################################################################
 #Function to calculate pairwise correlations (all or only significant, controlled by the threshold variable)
 #ARGUMENTS
+#file - name of the output file
 #data_table - the input data frame 
 #labels - data frame with labels
-#outDir - the output directory where the file will be saved
-#filename - name of the output file
 #format -  the file format for the output, per default a pdf with the correlations is created, optionally, plots can be saved in a power point file
 #type - type of the correlation, by default "pearson", can be changed to "spearman" or "kendall" for non-parametric correlation
 #threshold - the cutoff p-value for considering a correlation to be statistically significant, by default 0.05
@@ -175,6 +174,7 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
           theme_classic(base_size=14) + theme(axis.text=element_text(size=12, color="black")) 
         #Include grouping color if included
         if(!is.null(grouping)){
+          # cat(grouping)
           grouping = factor(grouping)
           p = p + geom_point(size  = 2.5, aes(col = grouping)) 
           if(!is.null(color_groups) & length(color_groups) >= length(unique(grouping))){
@@ -209,6 +209,7 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
   }
   if (format == ".zip"){
     zip(zipfile = file, files = fs)
+    # clean up pdf files in working directory after zipping together
     for (elem in fs){
       system(paste("rm -f", elem)) 
     }
