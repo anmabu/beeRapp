@@ -29,7 +29,8 @@ ui <- fluidPage(
         menuItem("Analysis", tabName = "analysis", 
                  menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
                  menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations"), 
-                 menuSubItem("Boxplots", tabName = "boxplots")
+                 menuSubItem("Boxplots", tabName = "boxplots"), 
+                 menuSubItem("Heatmap", tabName = "heatmap")
         )       
       )
     ),
@@ -43,12 +44,14 @@ ui <- fluidPage(
                    dataTableOutput("datatable")
                   )
                 )), 
-        ## Correlation Matrices ####
+        ## Correlation Matrix ####
         tabItem(tabName = "correlationmatrices", 
           fluidRow(
             column(12, 
-              h4("Select Variables"), 
-              div(style = "height:300px;overflow-y: scroll", uiOutput("selectlabels")), 
+                   box( 
+              div(style = "height:300px;overflow-y: scroll;width:100%", uiOutput("selectlabels")), 
+              title = "Select Variables", width = 12, collapsible = T 
+                   )
             )
           ),
           fluidRow(
@@ -66,7 +69,6 @@ ui <- fluidPage(
           fluidRow(
             column(12, 
               h4("Pairwise Correlations"),
-              # Make more choices of Correlations available 
               selectInput("corrtype", "Select Correlation Type", choices = c("pearson", "spearman", "kendall")),# , "spearman", "kendall")),
               numericInput("thresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001),
               downloadButton("downpaircorr", "Download"),
@@ -125,6 +127,21 @@ ui <- fluidPage(
               )
             )
           )
+        ), 
+        ## Heatmap ####
+        tabItem(tabName = "heatmap", 
+          fluidRow(
+            column(12, 
+              h4("Heatmap"), 
+              h5("Settings"))
+          ), 
+          fluidRow(
+            column(12, 
+              h4("Heatmap"), 
+              div(style = "display:inline-block", actionButton("plot_selected_heatmap", "Plot")), 
+              div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
+              plotOutput("exampleheatmap", height = 600))
+          )
         )
       )
     )
@@ -173,9 +190,10 @@ server <- function(input, output, session) {
     ## UI ouputs ####
     # Select labels for Correlation Matrix
     output$selectlabels <- renderUI({
-      checkboxGroupInput("selection", "Which data do you want to plot?", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
+      checkboxGroupInput("selection", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
     })
     ## Correlation Matrix ####
+    ### Example Correlation Matrix ####
     observeEvent(input$plot_selected_script, 
         {plotvalues <- c(paste0(input$selection))
         source("prelim_script.R", local = TRUE)
@@ -463,14 +481,21 @@ server <- function(input, output, session) {
     
     ### Color Boxplots ####
     output$colorboxplot <- renderUI({
-      # choices <- c("None")
       data_choices <- req(colnames(metadata()))
-      choices <- c(data_choices)
-      radioButtons("select_boxgroups", "Color by group", choices, selected="phenotype") 
+      # only make meaningful choices possible for boxplots
+      possible_choices <- c()
+      for (col in data_choices){
+        group <- metadata()[, c(col)]
+        max_group <- max(as.numeric(factor(group)))
+        if (max_group == 2){
+          possible_choices <- c(possible_choices, col)
+        }
+      }
+      choices <- c(possible_choices)
+      radioButtons("select_boxgroups", "Color by group", choices) 
     })
     boxplotcolor <- reactive({
-      cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-      # colors <- list("blue", "red", "green")
+      cbbPalette <- c("#E66100", "#5D3A9B")
       return(cbbPalette)
     })
     
@@ -478,7 +503,11 @@ server <- function(input, output, session) {
     boxplotgroups <- reactive({
       req(input$select_boxgroups)
       group <- metadata()[,c(input$select_boxgroups)]
+      # max_group <- max(as.numeric(factor(group)))
+      # cat(max(as.numeric(factor(group))))
+      # if (max_group == 2) { 
       return(group)
+      # }
     })
     
     ### Download Boxplots ####
@@ -508,6 +537,135 @@ server <- function(input, output, session) {
       
     )
     
+    ## Heatmaps####
+    ### Example Heatmap ####
+    output$exampleheatmap <- renderPlot({
+      # had to remove 'my' from 'my.breaks' in lines 423 + 424
+      # createHeatmap(inputdata(), file = NULL)
+      data_table <- inputdata()
+      scale <- TRUE
+      cluster_cols <- FALSE
+      cluster_rows <- TRUE 
+      dendrogram_cols <- FALSE
+      dendrogram_rows <- TRUE
+      grouping <- NULL
+      color_groups <- NULL
+      subset <- NULL
+      palette <- "RdBu"
+      #Check if the user wants to subset the matrix
+      if(!is.null(subset)){
+        data_table = data_table[,subset]
+      }
+      
+      #Scale the data to z_scores to overcome different measuring scale. set to TRUE per default
+      if(scale==TRUE){
+        data_table = base::as.data.frame(base::scale(data_table))
+        
+        #Create color code centered around 0
+        max.val = max(abs(data_table))
+        
+        cols = grDevices::hcl.colors(n = 20, palette = palette)
+        
+        if (palette %in% c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                           "Teal", "Sunset", "Viridis")){
+          cols = base::rev(cols)
+        }
+        
+        breaks = c(seq(-max.val, -0.001, length.out = 50), 0, seq(0.001, max.val, length.out = 50))
+        # cat(breaks)
+        colors = c(grDevices::colorRampPalette(colors = c(cols[c(1,2,4,6,10)]))(length(breaks[breaks<0])), "white",
+                   grDevices::colorRampPalette(colors = c(cols[c(11,15,17,19,20)]))(length(breaks[breaks>0])))
+        
+      }else{
+        
+        cols = grDevices::hcl.colors(n = 20, palette = palette)
+        
+        if (palette %in% c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                           "Teal", "Sunset", "Viridis")){
+          cols = base::rev(cols)
+          colors = cols
+          breaks = NA
+        }
+      }
+      
+      
+      #Include annotation for groups if grouping variables is included
+      if(!is.null(grouping)){
+        grouping = factor(grouping)
+        
+        annotation = data.frame(group = grouping)
+        rownames(annotation) = rownames(data_table)
+        annot_colors = NA
+        
+        if(!is.null(color_groups)){
+          annot_colors <- color_groups
+          names(annot_colors) = levels(grouping)
+          annot_colors <- list(group = annot_colors)
+        }
+        
+      }else{
+        annotation= NA
+        annot_colors = NA}
+      
+      #Determine the height of the dendrograms and size of the heatmap
+      if(dendrogram_cols == FALSE){
+        treeheight_col = 0
+      }else{treeheight_col = 30}
+      
+      if(dendrogram_rows == FALSE){
+        treeheight_row = 0
+      }else{treeheight_row = 30}
+      
+      
+      #ECreate the heatmap
+      if(ncol(data_table) <= 10){
+        height = 7
+        width = 5
+        font_size = 10
+      }
+      
+      if(ncol(data_table) > 10 & ncol(data_table) < 50){
+        height = 6
+        width = 8
+        font_size = 9
+      }
+      
+      if(ncol(data_table)>=50 & ncol(data_table)<90){
+        height = 8
+        width = 10
+        font_size=8
+      }
+      
+      if(ncol(data_table)>=90 ){
+        height = 10
+        width = 14
+        font_size=7
+      }
+      pheatmap::pheatmap(data_table, cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+                         treeheight_row = treeheight_row, treeheight_col = treeheight_col,
+                         fontsize= font_size, angle_col = 315, na_col = "gray45",
+                         color = colors, breaks = breaks,
+                         annotation_row = annotation, annotation_names_row = FALSE,
+                         annotation_colors = annot_colors)
+    })
+    ### Download Heatmap ####
+    output$downheatmap <- downloadHandler(
+      filename <- ("heatmap.pdf"),
+      content <- function(file){
+        data_table <- inputdata()
+        file <- file
+        scale <- TRUE
+        cluster_cols <- FALSE 
+        cluster_rows <- TRUE 
+        dendrogram_cols <- FALSE
+        dendrogram_rows <- TRUE
+        grouping <- NULL
+        color_groups <- NULL
+        subset <- NULL
+        palette <- "RdBu"
+        createHeatmap(data_table, file)
+      }
+    )
 }
 # ?parallelly::supportsMulticore
 shinyApp(ui, server)
