@@ -16,6 +16,7 @@ library(sets)
 # install.packages("future", dependencies = T)
 # if(interactive()){
 plan(multisession)
+# UI ####
 ui <- fluidPage(
     # theme = bslib::bs_theme(bootswatch = "flatly"),
     # titlePanel("First Version"),
@@ -27,19 +28,22 @@ ui <- fluidPage(
         menuItem("Import Data", tabName = "importdata"), 
         menuItem("Analysis", tabName = "analysis", 
                  menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
-                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations")
+                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations"), 
+                 menuSubItem("Boxplots", tabName = "boxplots")
         )       
       )
     ),
     dashboardBody(
       tabItems(
+        ## Import Data ####
         tabItem(tabName = "importdata", 
                 fluidRow(
                   column(12,
-                         fileInput("upload", "Select file to input", accept=".xlsx", placeholder = ".xlsx input file"), 
-                         dataTableOutput("datatable")
+                   fileInput("upload", "Select file to input", accept=".xlsx", placeholder = ".xlsx input file"), 
+                   dataTableOutput("datatable")
                   )
                 )), 
+        ## Correlation Matrices ####
         tabItem(tabName = "correlationmatrices", 
           fluidRow(
             column(12, 
@@ -57,6 +61,7 @@ ui <- fluidPage(
             )
           ), 
         ), 
+        ## Pairwise Correlation ####
         tabItem(tabName = "pairwisecorrelations", 
           fluidRow(
             column(12, 
@@ -84,12 +89,40 @@ ui <- fluidPage(
               h4("Plot Settings"),
               
               column(2,
-              radioButtons("mouseID", "Mouse ID", c("no", "yes"))
+              radioButtons("pairID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
               ), 
               column(3, 
-                     uiOutput("colorgroups")
+              uiOutput("colorgroups")
               )
               # make column to select colors of plot
+            )
+          )
+        ), 
+        ## Boxplots ####
+        tabItem(tabName = "boxplots", 
+          fluidRow(
+            column(12, 
+                h4("Boxplots"), 
+                selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test")),
+                numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001),
+                downloadButton("downboxplots", "Download"),
+                div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
+                                                                choiceNames = c(".pdf (All plots)", ".pptx (All plots)"), 
+                                                                choiceValues = c("pdf", "pptx")))
+            )
+          ), 
+          fluidRow(
+            column(6,
+              h4("Example Plot"), 
+              plotOutput("boxplotexample", height = 400)
+            ), 
+            column(6, 
+              h4("Plot Settings"), 
+              column(3, 
+                uiOutput("colorboxplot"), 
+                radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F), 
+                radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+              )
             )
           )
         )
@@ -101,9 +134,10 @@ ui <- fluidPage(
          
 
         
-
+# Server ####
 server <- function(input, output, session) {
     source("prelim_script.R")
+    ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
     metadata <- reactive({
         req(infile <- input$upload)
@@ -136,18 +170,19 @@ server <- function(input, output, session) {
     output$datatable <- renderDataTable({
         inputdata()[, 1:ncol(inputdata())] # rownames = T, colnames = T
         })
+    ## UI ouputs ####
     # Select labels for Correlation Matrix
     output$selectlabels <- renderUI({
       checkboxGroupInput("selection", "Which data do you want to plot?", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
     })
-    # Render Correlation Matrix with selected values
+    ## Correlation Matrix ####
     observeEvent(input$plot_selected_script, 
         {plotvalues <- c(paste0(input$selection))
         source("prelim_script.R", local = TRUE)
         output$cormat <- renderPlot(correlationMatrix(inputdata(), subset = plotvalues, outDir = NULL, filename = NULL))
          })
 
-    # Download for Correlation Matrix with selected values
+    ### Download Correlation Matrix ####
     output$downloadcorr <- downloadHandler( 
         filename <- ("cormat.pdf"), 
         content <- function(file) { 
@@ -157,7 +192,8 @@ server <- function(input, output, session) {
             dev.off()
             } 
         )
-    # Renders example plot for Pairwise Correlation
+    ## Pairwise Correlation ####
+    ### Example Plot Pairwise Correlation ####
     output$paircorrexample <- renderPlot({
       data_table <- inputdata()
       labels <- labels()
@@ -165,6 +201,7 @@ server <- function(input, output, session) {
       threshold <- input$thresholdvalue
       grouping <- NULL
       color_groups <- NULL
+      animal_label <- input$pairID
       if (req(input$select_colorgroups) != "None"){
         grouping <- pairgroups()
         color_groups <- paircolor()
@@ -189,6 +226,12 @@ server <- function(input, output, session) {
               stat_smooth(formula = "y~x", method = "lm", se = F, color="black") +
               labs(col="", x = x_lab, y = y_lab) +
               theme_classic(base_size=14) + theme(axis.text=element_text(size=12, color="black")) 
+            #Include animal label if argument is set to TRUE
+            if(animal_label == TRUE){
+              lab = rownames(data_table)
+              p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=3,
+                                               min.segment.length = 0, show.legend = F)
+            }
             #Get y-limits of the plotting area
             ymax = ggplot2::layer_scales(p)$y$range$range[2]
             ymin = ggplot2::layer_scales(p)$y$range$range[1]
@@ -226,15 +269,22 @@ server <- function(input, output, session) {
         }
       }
     })
+    ### Color Pairwise Correlation ####
     output$colorgroups <- renderUI({
       choices <- c("None")
       data_choices <- req(colnames(metadata()))
       choices <- c(choices, data_choices)
       radioButtons("select_colorgroups", "Color by group", choices, selected="None") 
     })
+    paircolor <- reactive({
+      cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+      # colors <- list("blue", "red", "green")
+      return(cbbPalette)
+    })
     
+    ### Groups Pairwise Correlation ####
     pairgroups <- reactive({
-      cat(input$select_colorgroups)
+      # cat(input$select_colorgroups)
       if (input$select_colorgroups == "None"){
         return(NULL)
       } else {
@@ -244,15 +294,7 @@ server <- function(input, output, session) {
       }
       })
     
-    paircolor <- reactive({
-      cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-      # colors <- list("blue", "red", "green")
-      return(cbbPalette)
-    })
-    
-    # outputfiles <- reactiveVal()
-    # format_react <- reactive({input$dfpairmatrix})
-    # Download for Pairwise Correlation Matrices
+    ### Download Pairwise Correlation #### 
     output$downpaircorr <- downloadHandler( 
       filename <- function () {
         if (input$dfpairmatrix == ".pptx"){
@@ -279,12 +321,13 @@ server <- function(input, output, session) {
         grouping <- pairgroups()
         color_groups <- unlist(paircolor())
         subset <- NULL
+        animal_label <- input$pairID
         # https://rstudio.github.io/promises/articles/casestudy.html
         # future_promise({
         # pairwiseCorrelations(file, data_table, labels, format, type, threshold)
         # }) %...>%
          # outputfiles()
-        pairwiseCorrelations(file, data_table, labels, format, type, threshold, grouping = grouping, color_groups = color_groups)
+        pairwiseCorrelations(file, data_table, labels, format, type, threshold, grouping = grouping, color_groups = color_groups, animal_label = animal_label)
         # fileoutput <- callr::r_bg(func = rundownpaircorr, args=list(file, format, data_table, labels, type, threshold), supervise = TRUE)
         # fileoutput
         }
@@ -292,6 +335,179 @@ server <- function(input, output, session) {
         fileoutput()
       }
     )
+    
+    ## Boxplots ####
+    ### Example Plot Boxplots ####
+    output$boxplotexample <- renderPlot({
+      data_table <- inputdata()
+      labels <- labels()
+      test <- boxtesttype()
+      threshold <- input$compthresholdvalue
+      grouping <- boxplotgroups()
+      color_groups <- unlist(boxplotcolor())
+      remove_outliers <- input$removeoutliers
+      subset <- NULL
+      animal_label <- input$boxID
+        
+      #Perform the analysis only for a subset of variables 
+      if(!is.null(subset)){
+        data_table = data_table[,subset]
+        labels = labels[subset,]
+      }
+        
+      #Change the grouping variable to a factor
+      grouping = factor(grouping)
+        
+      for (i in 1:ncol(data_table)){
+        
+        #Screen for outliers and remove them if remove_outliers = TRUE
+        if(remove_outliers == TRUE){
+            
+          y_var = data_table[,i]
+          names(y_var) = rownames(data_table)
+          group1 = y_var[grouping == base::levels(grouping)[1]]
+          group2 = y_var[grouping == base::levels(grouping)[2]]
+            
+          #Transform values to z-scores
+          group1_z = (group1 - base::mean(stats::na.omit(group1)))/stats::sd(stats::na.omit(group1))
+          group2_z = (group2 - base::mean(stats::na.omit(group2)))/stats::sd(stats::na.omit(group2))
+            
+          #get potential outliers
+          outliers1 = base::names(group1_z)[base::abs(group1_z)>3.29]
+          outliers2 = base::names(group2_z)[base::abs(group2_z)>3.29]
+          outliers = c(outliers1, outliers2)
+            
+          #Set outliers to NA in the data_table
+          data_table[rownames(data_table) %in% outliers, i] = NA
+            
+        }
+          
+        #Perform the statistical test, per default, a wilcox test, a t.test can be performed alternatively
+        if (test == "wilcox"){
+          p.val = base::suppressWarnings(stats::wilcox.test(data_table[,i]~grouping, var.equal=T)$p.value)
+        }
+          
+        #Alternatively, a t-test is performed
+        if (test == "t.test"){
+          #First check for variance equality
+          
+          p.var = stats::var.test(data_table[,i]~grouping)$p.value
+            
+          #Perform  a standard or Welch's t-test depending on variance equality
+          if (p.var < 0.05){
+            p.val = stats::t.test(data_table[,i]~grouping)$p.value
+          }else{
+            p.val = stats::t.test(data_table[,i]~grouping, var.equal=T)$p.value
+          }
+        }
+          
+        #Create the plot if the p-value is lower than the threshold
+        if(p.val <=threshold){
+            
+          y_lab = paste(labels$label1[i], 
+                        labels$label2[i], sep ="\n")
+            
+          p = ggplot2::ggplot(data_table,
+                              aes(x = grouping, y = data_table[,i], 
+                                  col = grouping)) +
+            geom_boxplot(outlier.shape = NA, show.legend =F) +
+            geom_point(show.legend = F, size=3,
+                       position = position_jitter(seed = 1)) + 
+            theme_test(base_size = 14)+
+            theme(axis.text = element_text(size=12, color="black")) +
+            labs(x="", col="", y = y_lab) 
+            
+            
+          #Include grouping color if included
+          if(!is.null(color_groups) & length(color_groups) >= length(unique(grouping))){
+            p = p + scale_color_manual(values = color_groups)
+          }
+          
+          #Include animal label if argument is set to TRUE
+          if(animal_label == TRUE){
+            lab = rownames(data_table)
+            
+            p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=3,
+                                             min.segment.length = 0, show.legend = F,
+                                             col = "black", position = position_jitter(seed = 1))
+          }
+            
+          #Get y-limits of the plotting area
+          ymax = ggplot2::layer_scales(p)$y$range$range[2]
+          ymin = ggplot2::layer_scales(p)$y$range$range[1]
+          
+          #Increase the limits of the plot to include the r and p-value
+          p = p + ylim(ymin, 1.2*ymax)
+            
+          if(p.val<0.001){
+            lab1 = "p<0.001"
+          }else{
+            lab1 = paste0("p=" ,round(p.val,3))
+          }
+            
+            
+          p = p + ggplot2::annotate(geom = "text", label = lab1, 
+                                    x = 1.5, 
+                                    y = 1.1*ymax, size = 4.5, color ="black", fontface="italic")
+          return(p)
+        }  
+      }
+    })
+    ### Reactives Boxplots ####
+    boxtesttype <- reactive({
+      comp <- req(input$comptype)
+      if (comp == "wilcoxon"){ comp = "wilcox"
+      } else { comp = "t.test"}
+      return(comp)
+    })
+    
+    ### Color Boxplots ####
+    output$colorboxplot <- renderUI({
+      # choices <- c("None")
+      data_choices <- req(colnames(metadata()))
+      choices <- c(data_choices)
+      radioButtons("select_boxgroups", "Color by group", choices, selected="phenotype") 
+    })
+    boxplotcolor <- reactive({
+      cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+      # colors <- list("blue", "red", "green")
+      return(cbbPalette)
+    })
+    
+    ### Groups Boxplots ####
+    boxplotgroups <- reactive({
+      req(input$select_boxgroups)
+      group <- metadata()[,c(input$select_boxgroups)]
+      return(group)
+    })
+    
+    ### Download Boxplots ####
+    output$downboxplots <- downloadHandler(
+      filename <- function() {
+        if (input$downboxformat == "pptx"){
+          name <- "boxplots.pptx" 
+          return(name)
+        } else if (input$downboxformat == "pdf"){
+          name <- "boxplots.pdf"
+          return(name)
+        }
+      },
+      content <- function(file){
+        data_table <- inputdata()
+        labels <- labels()
+        format <- input$downboxformat
+        test <- boxtesttype()
+        threshold <- input$compthresholdvalue
+        grouping <- boxplotgroups()
+        color_groups <- unlist(boxplotcolor())
+        remove_outliers <- input$removeoutliers
+        subset <- NULL
+        animal_label <- input$boxID
+        pairwiseComparisons(data_table, labels, file, format, test, threshold, grouping, color_groups, remove_outliers, subset, animal_label)
+      }
+      
+    )
+    
 }
 # ?parallelly::supportsMulticore
 shinyApp(ui, server)

@@ -31,7 +31,7 @@ labels <- read.xlsx("grand_table.xlsx", colNames = T, sheet =  "labels")
 meta_data <- read.xlsx("grand_table.xlsx", colNames = T, sheet =  "meta_data") 
 
 #################################################################################################################
-#SANITY CHECKS
+#SANITY CHECKS ####
 
 #1. The data_table contains the animal id as row names. Check if they are in the same order as in the meta_data table
 
@@ -47,9 +47,7 @@ vec <- colnames(data_table) == labels$colnames
 #The following command should return true
 all(vec) == TRUE
 
-#
-################################################################################################################
-#CORRELATION MATRIX ALL VALIABLES
+# Correlation Matrix all Variables ####
 #Function to calculate a correlation matrix for the behavioural data matrix
 
 #ARGUMENTS
@@ -110,8 +108,7 @@ correlationMatrix <- function(data_table, outDir,
 
 
 
-
-##############################################################################
+# Pairwise Correlation ####
 #Function to calculate pairwise correlations (all or only significant, controlled by the threshold variable)
 #ARGUMENTS
 #file - name of the output file
@@ -127,7 +124,8 @@ correlationMatrix <- function(data_table, outDir,
 pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf", 
                                  type = "pearson", threshold = 0.05, 
                                  grouping = NULL, color_groups = NULL, 
-                                 subset = NULL){
+                                 subset = NULL, 
+                                 animal_label = FALSE){
   
   #Subset the input data frame and the labels data frame if a subset argument is provided
   if(!is.null(subset)){
@@ -181,6 +179,13 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
             p <- p + scale_color_manual(values = color_groups)
           }
         }
+        #Include animal label if argument is set to TRUE
+        if(animal_label == TRUE){
+          lab = rownames(data_table)
+          
+          p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=3,
+                                           min.segment.length = 0, show.legend = F)
+        }
         #Get y-limits of the plotting area
         ymax = ggplot2::layer_scales(p)$y$range$range[2]
         ymin = ggplot2::layer_scales(p)$y$range$range[1]
@@ -219,4 +224,284 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
   } else {
     dev.off()}
 }
+
+
+
+# Boxplot #### 
+#Function to statistically compare two groups and show results as a boxplot (all or only significant, controlled by the threshold variable)
+#ARGUMENTS
+#data_table - the input data frame 
+#labels - data frame with labels
+#file - file name including directory
+#format -  the file format for the output, per default a pdf with the correlations is created, optionally, plots can be saved in a power point file
+#test - the pairwise statistical test, per default a Wilcoxon test ("wilcox") is used, alternatively a t.test can be performed ("t.test")
+#threshold - the cutoff p-value for considering a result to be statistically significant, by default 0.05
+#grouping - a grouping variable cab be included to color data points according to a group assignment
+#color_groups - a vector with as many values as levels of the "grouping" argument
+#remove_outliers - logical, per default set to FALSE, if set to true, outliers in both groups will be removed
+#Outliers are evaluated based on z-scores with a two-sided p-value <0.001. Recommended to set to TRUE if test = "t.test"
+#subset - a vector containing column indices in case the user once to calculate the matrix for a subset of the data
+#animal_label - an argument set to FALSE, if TRUE, animal labels are shwon next to the data points
+
+pairwiseComparisons <- function(data_table, labels, file, format = "pdf", 
+                                test = "wilcox", threshold = 0.05, 
+                                grouping, color_groups = NULL,
+                                remove_outliers = FALSE,
+                                subset = NULL,
+                                animal_label = FALSE){
+  
+  #Perform the analysis only for a subset of variables 
+  if(!is.null(subset)){
+    data_table = data_table[,subset]
+    labels = labels[subset,]
+  }
+  
+  #Determine the output format selected by the user 
+  if(format == "pdf"){
+    pdf(file, height=4, width = 3)
+  }
+  
+  if(format == "pptx"){
+    doc = officer::read_pptx()
+  }
+  
+  #Change the grouping variable to a factor
+  grouping = factor(grouping)
+  progress <- shiny::Progress$new()
+  on.exit(progress$close())
+  progress$set(message = "Creating plots", value = 0)
+  
+  for (i in 1:ncol(data_table)){
+    # move progress bar
+    progress$inc(1/(ncol(data_table)-1))
+    
+    #Screen for outliers and remove them if remove_outliers = TRUE
+    if(remove_outliers == TRUE){
+      
+      y_var = data_table[,i]
+      names(y_var) = rownames(data_table)
+      group1 = y_var[grouping == base::levels(grouping)[1]]
+      group2 = y_var[grouping == base::levels(grouping)[2]]
+      
+      #Transform values to z-scores
+      group1_z = (group1 - base::mean(stats::na.omit(group1)))/stats::sd(stats::na.omit(group1))
+      group2_z = (group2 - base::mean(stats::na.omit(group2)))/stats::sd(stats::na.omit(group2))
+      
+      #get potential outliers
+      outliers1 = base::names(group1_z)[base::abs(group1_z)>3.29]
+      outliers2 = base::names(group2_z)[base::abs(group2_z)>3.29]
+      outliers = c(outliers1, outliers2)
+      
+      #Set outliers to NA in the data_table
+      data_table[rownames(data_table) %in% outliers, i] = NA
+      
+    }
+    
+    #Perform the statistical test, per default, a wilcox test, a t.test can be performed alternatively
+    if (test == "wilcox"){
+      p.val = base::suppressWarnings(stats::wilcox.test(data_table[,i]~grouping, var.equal=T)$p.value)
+    }
+    
+    #Alternatively, a t-test is performed
+    if (test == "t.test"){
+      #First check for variance equality
+      
+      p.var = stats::var.test(data_table[,i]~grouping)$p.value
+      
+      #Perform  a standard or Welch's t-test depending on variance equality
+      if (p.var < 0.05){
+        p.val = stats::t.test(data_table[,i]~grouping)$p.value
+      }else{
+        p.val = stats::t.test(data_table[,i]~grouping, var.equal=T)$p.value
+      }
+    }
+    
+    #Create the plot if the p-value is lower than the threshold
+    if(p.val <=threshold){
+      
+      y_lab = paste(labels$label1[i], 
+                    labels$label2[i], sep ="\n")
+      
+      p = ggplot2::ggplot(data_table,
+                          aes(x = grouping, y = data_table[,i], 
+                              col = grouping)) +
+        geom_boxplot(outlier.shape = NA, show.legend =F) +
+        geom_point(show.legend = F, size=3,
+                   position = position_jitter(seed = 1)) + 
+        theme_test(base_size = 14)+
+        theme(axis.text = element_text(size=12, color="black")) +
+        labs(x="", col="", y = y_lab) 
+      
+      
+      #Include grouping color if included
+      if(!is.null(color_groups) & length(color_groups) >= length(unique(grouping))){
+        p = p + scale_color_manual(values = color_groups)
+      }
+      
+      #Include animal label if argument is set to TRUE
+      if(animal_label == TRUE){
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=3,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black", position = position_jitter(seed = 1))
+      }
+      
+      #Get y-limits of the plotting area
+      ymax = ggplot2::layer_scales(p)$y$range$range[2]
+      ymin = ggplot2::layer_scales(p)$y$range$range[1]
+      
+      #Increase the limits of the plot to include the r and p-value
+      p = p + ylim(ymin, 1.2*ymax)
+      
+      if(p.val<0.001){
+        lab1 = "p<0.001"
+      }else{
+        lab1 = paste0("p=" ,round(p.val,3))
+      }
+      
+      
+      p = p + ggplot2::annotate(geom = "text", label = lab1, 
+                                x = 1.5, 
+                                y = 1.1*ymax, size = 4.5, color ="black", fontface="italic")
+      
+      
+      if(format == "pptx"){
+        doc = officer::add_slide(doc)
+        doc = officer::ph_with(x = doc, p, ph_location(type="body",width=3, height=4), res=600)
+      }else{print(p)}
+      
+    }
+    
+  }
+  if(format == "pptx"){
+    print(doc, target = file) 
+  }else(dev.off())
+}
+
+# Heatmap ####
+
+#FUNCTION TO CREATE A HEATMAP OF THE INPUT DSTS TABLE
+#ARGUMENTS
+#data_table - the input data frame 
+#file - the output directory and file name to save the output
+#scale = TRUE: an argument to specify if the values are centered and scaled (z-scores). Per default true to account for different scales of the input data
+#cluster_cols = FALSE: specify whether a hierarchical clustering of columns should be applied
+#cluster_rows = TRUE: specifiy whetehr a hierarchical clusterinf of rows should be applied
+#dendrogram_cols = FALSE: specify whether the dendrogram of the columns should be shown
+#dendrogram_rows = TRUE: specif whether the dendrogram with clustering of rows should be shown
+#grouping = NULL - an optional argument to annotate groups that animals belong to
+#color_groups = NULL - an optional argument to specify the colors for the annotation 
+#subset - a vector containing column indices in case the user once to calculate the heatmap for a subset of the data
+#palette - color palette for the heatmap. Recommended values include:
+#Diverging colors: "RdBu", "Blue-Red", Cyan-Magenta, "PRGn", "Tropic", "PuOr", "PiYG"
+#Sequential colors: "Blue-Yellow", "Teal", "Sunset", "Viridis"
+createHeatmap <- function(data_table, file, scale = TRUE, cluster_cols = FALSE, 
+                          cluster_rows  =TRUE, dendrogram_cols  =FALSE,
+                          dendrogram_rows = TRUE, grouping = NULL,
+                          color_groups = NULL, subset = NULL,
+                          palette = "RdBu"){
+  
+  #Check if the user wants to subset the matrix
+  if(!is.null(subset)){
+    data_table = data_table[,subset]
+  }
+  
+  #Scale the data to z_scores to overcome different measuring scale. set to TRUE per default
+  if(scale==TRUE){
+    data_table = base::as.data.frame(base::scale(data_table))
+    
+    #Create color code centered around 0
+    max.val = max(abs(data_table))
+    
+    cols = grDevices::hcl.colors(n = 20, palette = palette)
+    
+    if (palette %in% c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                       "Teal", "Sunset", "Viridis")){
+      cols = base::rev(cols)
+    }
+    
+    breaks = c(seq(-max.val, -0.001, length.out = 50), 0, seq(0.001, max.val, length.out = 50))
+    colors = c(grDevices::colorRampPalette(colors = c(cols[c(1,2,4,6,10)]))(length(breaks[my.breaks<0])), "white",
+               grDevices::colorRampPalette(colors = c(cols[c(11,15,17,19,20)]))(length(my.breaks[my.breaks>0])))
+    
+  }else{
+    
+    cols = grDevices::hcl.colors(n = 20, palette = palette)
+    
+    if (palette %in% c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                       "Teal", "Sunset", "Viridis")){
+      cols = base::rev(cols)
+      colors = cols
+      breaks = NA
+    }
+  }
+  
+  
+  #Include annotation for groups if grouping variables is included
+  if(!is.null(grouping)){
+    grouping = factor(grouping)
+    
+    annotation = data.frame(group = grouping)
+    rownames(annotation) = rownames(data_table)
+    annot_colors = NA
+    
+    if(!is.null(color_groups)){
+      annot_colors <- color_groups
+      names(annot_colors) = levels(grouping)
+      annot_colors <- list(group = annot_colors)
+    }
+    
+  }else{
+    annotation= NA
+    annot_colors = NA}
+  
+  #Determine the height of the dendrograms and size of the heatmap
+  if(dendrogram_cols == FALSE){
+    treeheight_col = 0
+  }else{treeheight_col = 30}
+  
+  if(dendrogram_rows == FALSE){
+    treeheight_row = 0
+  }else{treeheight_row = 30}
+  
+  
+  #ECreate the heatmap
+  if(ncol(data_table) <= 10){
+    height = 7
+    width = 5
+    font_size = 10
+  }
+  
+  if(ncol(data_table) > 10 & ncol(data_table) < 50){
+    height = 6
+    width = 8
+    font_size = 9
+  }
+  
+  if(ncol(data_table)>=50 & ncol(data_table)<90){
+    height = 8
+    width = 10
+    font_size=8
+  }
+  
+  if(ncol(data_table)>=90 ){
+    height = 10
+    width = 14
+    font_size=7
+  }
+  
+  pdf(file, height = height, width = width)
+  #Create the heatmap
+  pheatmap::pheatmap(data_table, cluster_rows = cluster_rows, cluster_cols = cluster_cols,
+                     treeheight_row = treeheight_row, treeheight_col = treeheight_col,
+                     fontsize= font_size, angle_col = 315, na_col = "gray45",
+                     color = colors, breaks = breaks,
+                     annotation_row = annotation, annotation_names_row = FALSE,
+                     annotation_colors = annot_colors)
+  dev.off()
+  
+  
+}
+
 
