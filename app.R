@@ -25,12 +25,15 @@ ui <- fluidPage(
     dashboardHeader(title = "Behavior Analysis"), 
     dashboardSidebar(
       sidebarMenu(
+        menuItem("Welcome!", tabName = "welcome"),
         menuItem("Import Data", tabName = "importdata"), 
         menuItem("Analysis", tabName = "analysis", 
                  menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
                  menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations"), 
                  menuSubItem("Boxplots", tabName = "boxplots"), 
-                 menuSubItem("Heatmap", tabName = "heatmap")
+                 menuSubItem("Heatmap", tabName = "heatmap"), 
+                 menuSubItem("Clustering", tabName = "clustering"), 
+                 menuSubItem("PCA", tabName = "pca")
         )       
       )
     ),
@@ -78,33 +81,45 @@ ui <- fluidPage(
         tabItem(tabName = "pairwisecorrelations", 
           fluidRow(
             column(12, 
-              h4("Pairwise Correlations"),
-              selectInput("corrtype", "Select Correlation Type", choices = c("pearson", "spearman", "kendall")),# , "spearman", "kendall")),
-              numericInput("thresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001),
-              downloadButton("downpaircorr", "Download"),
-              div(style= "display:inline-block", radioButtons("dfpairmatrix", "", inline = TRUE, 
-                          choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperately as .pdf)"), 
-                          choiceValues = c(".pdf", ".pptx", ".zip")))
+                box(
+              # h4("Pairwise Correlations"),
+                  selectInput("corrtype", "Select Correlation Type", choices = c("pearson", "spearman", "kendall"), width = "400px"),# , "spearman", "kendall")),
+                  numericInput("thresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width="400px"),
+                  downloadButton("downpaircorr", "Download"),
+                  div(style= "display:inline-block", radioButtons("dfpairmatrix", "", inline = TRUE, 
+                              choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperately as .pdf)"), 
+                              choiceValues = c(".pdf", ".pptx", ".zip"))), 
+                  title  = "Pairwise Correlations", width = 12, collapsible = F, solidHeader = T, status = "primary"
+                )
               # verbatimTextOutput("selected_format"),
               # make options to selece/deselect all Values
               # make options to deselect Values
             )
           ), 
           fluidRow(
-            column(6, 
-              h4("Example Plot"), 
-              plotOutput("paircorrexample", height = 400)
+            column(6,
+                box(
+              # h4("Example Plot"), 
+                  plotOutput("paircorrexample", width=500, height = 400), 
               # change colors of plot
-              # example plot for colors? 
+              # example plot for colors?
+                  title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
+                ), 
+                # div(style = "display:inline-block;vertical-align:top", box(
+                  
+                  # title = "test", width = 2, solidHeader = T
+                # ))
               ),
-            column(6, 
-              h4("Plot Settings"),
-              
-              column(2,
-              radioButtons("pairID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
-              ), 
-              column(3, 
-              uiOutput("colorgroups")
+            column(4, 
+              # h4("Plot Settings"),
+              box(
+                column(6,
+                  radioButtons("pairID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+                ), 
+                column(6, 
+                  uiOutput("colorgroups")
+                ),
+              title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
               )
               # make column to select colors of plot
             )
@@ -113,27 +128,40 @@ ui <- fluidPage(
         ## Boxplots ####
         tabItem(tabName = "boxplots", 
           fluidRow(
-            column(12, 
-                h4("Boxplots"), 
-                selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test")),
-                numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001),
+            column(12,
+              box(
+                # h4("Boxplots"), 
+                selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test"), width = "400px"),
+                numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
                 downloadButton("downboxplots", "Download"),
                 div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
                                                                 choiceNames = c(".pdf (All plots)", ".pptx (All plots)"), 
-                                                                choiceValues = c("pdf", "pptx")))
+                                                                choiceValues = c("pdf", "pptx"))), 
+              title = "Boxplots", width = 12, solidHeader = T, collapsible = F, status = "primary" 
+              )
             )
           ), 
           fluidRow(
             column(6,
-              h4("Example Plot"), 
-              plotOutput("boxplotexample", height = 400)
+              box(
+              # h4("Example Plot"), 
+                plotOutput("boxplotexample", height = 600, width = 450), 
+                title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
+              )
             ), 
-            column(6, 
-              h4("Plot Settings"), 
-              column(3, 
-                uiOutput("colorboxplot"), 
-                radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F), 
-                radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+            column(5, 
+              # h4("Plot Settings"), 
+              box(
+                column(3, 
+                  uiOutput("colorboxplot")
+                ), 
+                column(3,
+                  radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F)
+                ),
+                column(3,
+                  radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+                ), 
+                title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
               )
             )
           )
@@ -141,16 +169,24 @@ ui <- fluidPage(
         ## Heatmap ####
         tabItem(tabName = "heatmap", 
           fluidRow(
-            column(12, 
-              h4("Heatmap"), 
-              selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
-                                                                             "Teal", "Sunset", "Viridis"), selected = "RdBu" )
+            column(12,
+                box(
+              # h4("Heatmap"), 
+                  selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                                                                             "Teal", "Sunset", "Viridis"), selected = "RdBu", width = "400px"),
+                  div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
+                  div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))),
+                  title = "Heatmap", width = 12, solidHeader = T, status = "primary"      
+              )
             )
           ), 
           fluidRow(
             column(12, 
-              div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
-              plotOutput("exampleheatmap", height = 600))
+              box(
+                plotOutput("exampleheatmap", height = 600, width = 1000), 
+                title = "Example Heatmap", width = 12, solidHeader = T, status = "primary", align = "center"
+              )
+            )
           )
         )
       )
