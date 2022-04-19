@@ -422,8 +422,8 @@ createHeatmap <- function(data_table, file, scale = TRUE, cluster_cols = FALSE,
     }
     
     breaks = c(seq(-max.val, -0.001, length.out = 50), 0, seq(0.001, max.val, length.out = 50))
-    colors = c(grDevices::colorRampPalette(colors = c(cols[c(1,2,4,6,10)]))(length(breaks[my.breaks<0])), "white",
-               grDevices::colorRampPalette(colors = c(cols[c(11,15,17,19,20)]))(length(my.breaks[my.breaks>0])))
+    colors = c(grDevices::colorRampPalette(colors = c(cols[c(1,2,4,6,10)]))(length(breaks[breaks<0])), "white",
+               grDevices::colorRampPalette(colors = c(cols[c(11,15,17,19,20)]))(length(breaks[breaks>0])))
     
   }else{
     
@@ -493,12 +493,15 @@ createHeatmap <- function(data_table, file, scale = TRUE, cluster_cols = FALSE,
   
   pdf(file, height = height, width = width)
   #Create the heatmap
+  # if (is.null(file)){
+    # return(
   pheatmap::pheatmap(data_table, cluster_rows = cluster_rows, cluster_cols = cluster_cols,
                      treeheight_row = treeheight_row, treeheight_col = treeheight_col,
                      fontsize= font_size, angle_col = 315, na_col = "gray45",
                      color = colors, breaks = breaks,
                      annotation_row = annotation, annotation_names_row = FALSE,
                      annotation_colors = annot_colors)
+    # )}
   dev.off()
   
   

@@ -21,7 +21,7 @@ ui <- fluidPage(
     # theme = bslib::bs_theme(bootswatch = "flatly"),
     # titlePanel("First Version"),
   dashboardPage(
-    skin = "purple",
+    # skin = "purple",
     dashboardHeader(title = "Behavior Analysis"), 
     dashboardSidebar(
       sidebarMenu(
@@ -46,21 +46,31 @@ ui <- fluidPage(
                 )), 
         ## Correlation Matrix ####
         tabItem(tabName = "correlationmatrices", 
+                # h1("Correlation Matrix"),
           fluidRow(
             column(12, 
-                   box( 
-              div(style = "height:300px;overflow-y: scroll;width:100%", uiOutput("selectlabels")), 
-              title = "Select Variables", width = 12, collapsible = T 
-                   )
+                box(
+                  div(style = "display:inline-block", actionButton("corrselectall", "Select All")), 
+                  div(style = "display:inline-block", actionButton("corrselectnone", "Select None")),
+                  div(style = "height:300px;overflow-y: scroll;width:100%", uiOutput("selectlabels")), 
+                  # div(style = "height:300px;overflow-y: scroll; width:100%", checkboxGroupInput("selection", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames)), 
+                  
+                  title = "Select Variables", width = 12, collapsible = T, 
+                      solidHeader = T, status = "primary"
+                )
             )
           ),
           fluidRow(
             column(12, 
-                 h4("Correlation Matrix"), 
-                 div(style = "display:inline-block", actionButton("plot_selected_script", "Plot")), 
+              box(
+                 # h4("Correlation Matrix"), 
+                 # div(style = "display:inline-block", actionButton("plot_selected_script", "Plot")), 
                  div(style = "display:inline-block", downloadButton("downloadcorr", "Download")),
                  # div(style= "display:inline-block", radioButtons("dfcorrmatrix", "", c(".pdf", ".pptx"), inline = TRUE)),
-                 plotOutput("cormat", height=800)
+                 plotOutput("cormat", height=800), 
+                 title = "Correlation Matrix", width = 12, collapsible = F, 
+                 solidHeader = T, status = "primary"
+              )
             )
           ), 
         ), 
@@ -133,12 +143,12 @@ ui <- fluidPage(
           fluidRow(
             column(12, 
               h4("Heatmap"), 
-              h5("Settings"))
+              selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                                                                             "Teal", "Sunset", "Viridis"), selected = "RdBu" )
+            )
           ), 
           fluidRow(
             column(12, 
-              h4("Heatmap"), 
-              div(style = "display:inline-block", actionButton("plot_selected_heatmap", "Plot")), 
               div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
               plotOutput("exampleheatmap", height = 600))
           )
@@ -187,18 +197,25 @@ server <- function(input, output, session) {
     output$datatable <- renderDataTable({
         inputdata()[, 1:ncol(inputdata())] # rownames = T, colnames = T
         })
-    ## UI ouputs ####
-    # Select labels for Correlation Matrix
+    
+    ## Correlation Matrix ####
+    ### Select Labels Correlation Matrix ####
     output$selectlabels <- renderUI({
       checkboxGroupInput("selection", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
     })
-    ## Correlation Matrix ####
+
+    observeEvent(input$corrselectall, {
+      updateCheckboxGroupInput(session, "selection", selected = labels()$colnames)
+    })
+    observeEvent(input$corrselectnone, {
+      updateCheckboxGroupInput(session, "selection", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames)
+    })    
     ### Example Correlation Matrix ####
-    observeEvent(input$plot_selected_script, 
-        {plotvalues <- c(paste0(input$selection))
-        source("prelim_script.R", local = TRUE)
-        output$cormat <- renderPlot(correlationMatrix(inputdata(), subset = plotvalues, outDir = NULL, filename = NULL))
-         })
+    output$cormat <- renderPlot({
+      plotvalues <- c(paste0(req(input$selection)))
+      correlationMatrix(inputdata(), subset = plotvalues, outDir = NULL, filename = NULL)
+      })
+    
 
     ### Download Correlation Matrix ####
     output$downloadcorr <- downloadHandler( 
@@ -329,7 +346,6 @@ server <- function(input, output, session) {
       content <- function(file) { 
         fileoutput <- reactive({ 
         format <- input$dfpairmatrix
-        writeLines(format)
         data_table <- inputdata()
         labels <- labels()
         type <- input$corrtype
@@ -537,7 +553,7 @@ server <- function(input, output, session) {
       
     )
     
-    ## Heatmaps####
+    ## Heatmap####
     ### Example Heatmap ####
     output$exampleheatmap <- renderPlot({
       # had to remove 'my' from 'my.breaks' in lines 423 + 424
@@ -551,7 +567,7 @@ server <- function(input, output, session) {
       grouping <- NULL
       color_groups <- NULL
       subset <- NULL
-      palette <- "RdBu"
+      palette <- input$heatmapcolor
       #Check if the user wants to subset the matrix
       if(!is.null(subset)){
         data_table = data_table[,subset]
