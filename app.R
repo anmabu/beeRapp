@@ -25,7 +25,7 @@ ui <- fluidPage(
     dashboardHeader(title = "Behavior Analysis"), 
     dashboardSidebar(
       sidebarMenu(
-        menuItem("Welcome!", tabName = "welcome"),
+        # menuItem("Welcome!", tabName = "welcome"),
         menuItem("Import Data", tabName = "importdata"), 
         menuItem("Analysis", tabName = "analysis", 
                  menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
@@ -69,7 +69,7 @@ ui <- fluidPage(
                  # h4("Correlation Matrix"), 
                  # div(style = "display:inline-block", actionButton("plot_selected_script", "Plot")), 
                  div(style = "display:inline-block", downloadButton("downloadcorr", "Download")),
-                 # div(style= "display:inline-block", radioButtons("dfcorrmatrix", "", c(".pdf", ".pptx"), inline = TRUE)),
+                 div(style= "display:inline-block", radioButtons("dfcorrmatrix", "", c(".pdf"))),
                  plotOutput("cormat", height=800), 
                  title = "Correlation Matrix", width = 12, collapsible = F, 
                  solidHeader = T, status = "primary"
@@ -149,21 +149,28 @@ ui <- fluidPage(
                 title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
               )
             ), 
-            column(5, 
+            column(4, 
               # h4("Plot Settings"), 
               box(
-                column(3, 
+                column(4, 
                   uiOutput("colorboxplot")
                 ), 
-                column(3,
+                column(4,
                   radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F)
                 ),
-                column(3,
+                column(4,
                   radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
                 ), 
                 title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
+              ), 
+              box(
+                column(6, 
+                  radioButtons("boxcolor.one", "Choose First Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#D55E00")), 
+                column(6, 
+                  radioButtons("boxcolor.two", "Choose Second Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#5D3A9B")),
+                title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
               )
-            )
+            ) 
           )
         ), 
         ## Heatmap ####
@@ -174,12 +181,20 @@ ui <- fluidPage(
               # h4("Heatmap"), 
                   selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
                                                                              "Teal", "Sunset", "Viridis"), selected = "RdBu", width = "400px"),
-                  div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
-                  div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))),
+                  column(2, radioButtons("cluster_cols.button", "Clustering of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                  column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                  column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                  column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                  fluidRow(
+                    column(12, 
+                           div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
+                           div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))))
+                  ),
                   title = "Heatmap", width = 12, solidHeader = T, status = "primary"      
               )
             )
           ), 
+          
           fluidRow(
             column(12, 
               box(
@@ -189,6 +204,8 @@ ui <- fluidPage(
             )
           )
         )
+      ## Clustering ####
+      ## PCA ####
       )
     )
   )
@@ -231,7 +248,16 @@ server <- function(input, output, session) {
     output$selected_format <- renderPrint(input$dfcorrmatrix)    
     # Display Data when loaded correctly
     output$datatable <- renderDataTable({
-        inputdata()[, 1:ncol(inputdata())] # rownames = T, colnames = T
+      datatable(
+        inputdata()[, 1:ncol(inputdata())], # rownames = T, colnames = T
+        extensions = c('Scroller'),
+        options = list(scrollY = 400,
+                       deferRender = TRUE,
+                       scroller = TRUE,
+                       paging = TRUE,
+                       dom = 'lBfrtip',
+                       fixedColumns = TRUE),
+      )
         })
     
     ## Correlation Matrix ####
@@ -353,7 +379,7 @@ server <- function(input, output, session) {
       return(cbbPalette)
     })
     
-    ### Groups Pairwise Correlation ####
+    ### Groups Pairwise Correlation####
     pairgroups <- reactive({
       # cat(input$select_colorgroups)
       if (input$select_colorgroups == "None"){
@@ -368,6 +394,7 @@ server <- function(input, output, session) {
     ### Download Pairwise Correlation #### 
     output$downpaircorr <- downloadHandler( 
       filename <- function () {
+        # add correlation type to file name?
         if (input$dfpairmatrix == ".pptx"){
           name <- "pair_corr_plots.pptx" 
           return(name)
@@ -547,7 +574,7 @@ server <- function(input, output, session) {
       radioButtons("select_boxgroups", "Color by group", choices) 
     })
     boxplotcolor <- reactive({
-      cbbPalette <- c("#E66100", "#5D3A9B")
+      cbbPalette <- c(input$boxcolor.one, input$boxcolor.two)
       return(cbbPalette)
     })
     
@@ -590,16 +617,32 @@ server <- function(input, output, session) {
     )
     
     ## Heatmap####
+    # Reactives
+    cols_cluster <- reactive({
+      if (eval(parse(text = input$dendrogram_cols.button)) | eval(parse(text = input$cluster_cols.button))) {
+        updateRadioButtons(session, "cluster_cols.button", selected = T)
+        return(T)
+      } else {return(F)}
+    })
+    
+    rows_cluster <- reactive({
+      if (eval(parse(text=input$dendrogram_rows.button)) | eval(parse(text=input$cluster_rows.button))) {
+        updateRadioButtons(session, "cluster_rows.button", selected = T)
+        return (T)
+      } else {return(F)}
+    })
+    
+    
     ### Example Heatmap ####
     output$exampleheatmap <- renderPlot({
       # had to remove 'my' from 'my.breaks' in lines 423 + 424
       # createHeatmap(inputdata(), file = NULL)
       data_table <- inputdata()
       scale <- TRUE
-      cluster_cols <- FALSE
-      cluster_rows <- TRUE 
-      dendrogram_cols <- FALSE
-      dendrogram_rows <- TRUE
+      cluster_cols <- cols_cluster()
+      cluster_rows <- rows_cluster()
+      dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))
+      dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
       grouping <- NULL
       color_groups <- NULL
       subset <- NULL
@@ -707,15 +750,18 @@ server <- function(input, output, session) {
         data_table <- inputdata()
         file <- file
         scale <- TRUE
-        cluster_cols <- FALSE 
-        cluster_rows <- TRUE 
-        dendrogram_cols <- FALSE
-        dendrogram_rows <- TRUE
+        cluster_cols <- cols_cluster()
+        cluster_rows <- rows_cluster()
+        dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))
+        dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
         grouping <- NULL
         color_groups <- NULL
         subset <- NULL
-        palette <- "RdBu"
-        createHeatmap(data_table, file)
+        palette <- input$heatmapcolor
+        createHeatmap(data_table, file, scale = scale, cluster_cols = cluster_cols,
+                      cluster_rows = cluster_rows, dendrogram_cols = dendrogram_cols,
+                      dendrogram_rows = dendrogram_rows, grouping = grouping, color_groups = color_groups, 
+                      subset = subset, palette = palette)
       }
     )
 }
