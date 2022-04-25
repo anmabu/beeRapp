@@ -1,18 +1,20 @@
-library(corrplot)
-library(DT)
-library(data.table)
-library(Hmisc)
-library(ggplot2)
-library(gridExtra)
-library(officer)
-library(openxlsx)
-# library(patchwork)
-library(shiny)
-library(shinydashboard)
-# library(uuid)
-library(promises)
-library(future)
-library(sets)
+suppressPackageStartupMessages({
+  library(corrplot)
+  library(DT)
+  library(data.table)
+  library(Hmisc)
+  library(ggplot2)
+  library(gridExtra)
+  library(officer)
+  library(openxlsx)
+  # library(patchwork)
+  library(shiny)
+  library(shinydashboard)
+  # library(uuid)
+  library(promises)
+  library(future)
+  library(sets)
+})
 # install.packages("future", dependencies = T)
 # if(interactive()){
 plan(multisession)
@@ -99,19 +101,12 @@ ui <- fluidPage(
           fluidRow(
             column(6,
                 box(
-              # h4("Example Plot"), 
                   plotOutput("paircorrexample", width=500, height = 400), 
               # change colors of plot
-              # example plot for colors?
                   title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
                 ), 
-                # div(style = "display:inline-block;vertical-align:top", box(
-                  
-                  # title = "test", width = 2, solidHeader = T
-                # ))
               ),
             column(4, 
-              # h4("Plot Settings"),
               box(
                 column(6,
                   radioButtons("pairID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
@@ -120,7 +115,14 @@ ui <- fluidPage(
                   uiOutput("colorgroups")
                 ),
               title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
-              )
+              ), 
+              # box(
+              #  column(6, 
+              #         radioButtons("paircolor.one", "Choose First Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#D55E00")), 
+              #  column(6, 
+              #         radioButtons("paircolor.two", "Choose Second Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#5D3A9B")),
+              #  title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
+              # )
               # make column to select colors of plot
             )
           )
@@ -175,6 +177,14 @@ ui <- fluidPage(
         ), 
         ## Heatmap ####
         tabItem(tabName = "heatmap", 
+          fluidRow(column(12, 
+              box(
+                div(style = "display:inline-block", actionButton("heatmapselectall", "Select All")), 
+                div(style = "display:inline-block", actionButton("heatmapselectnone", "Select None")),
+                div(style = "height:300px;overflow-y: scroll;width:100%",uiOutput("selectlabelsheatmap")),
+              title = "Select Variables", width = 12, solidHeader = T, collapsible = T, status = "primary")
+            )
+          ), 
           fluidRow(
             column(12,
                 box(
@@ -182,9 +192,9 @@ ui <- fluidPage(
                   selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
                                                                              "Teal", "Sunset", "Viridis"), selected = "RdBu", width = "400px"),
                   column(2, radioButtons("cluster_cols.button", "Clustering of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                  column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                  column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   fluidRow(
                     column(12, 
                            div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
@@ -369,7 +379,7 @@ server <- function(input, output, session) {
     ### Color Pairwise Correlation ####
     output$colorgroups <- renderUI({
       choices <- c("None")
-      data_choices <- req(colnames(metadata()))
+      data_choices <- req(colnames(metadata()))  # only add when 2 or more different values?
       choices <- c(choices, data_choices)
       radioButtons("select_colorgroups", "Color by group", choices, selected="None") 
     })
@@ -631,7 +641,17 @@ server <- function(input, output, session) {
         return (T)
       } else {return(F)}
     })
+    ### Select Labels Heatmap ####
+    output$selectlabelsheatmap <- renderUI({
+      checkboxGroupInput("selectionheatmap", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
+    })
     
+    observeEvent(input$heatmapselectall, {
+      updateCheckboxGroupInput(session, "selectionheatmap", selected = labels()$colnames)
+    })
+    observeEvent(input$heatmapselectnone, {
+      updateCheckboxGroupInput(session, "selectionheatmap", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames)
+    })   
     
     ### Example Heatmap ####
     output$exampleheatmap <- renderPlot({
@@ -645,7 +665,7 @@ server <- function(input, output, session) {
       dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
       grouping <- NULL
       color_groups <- NULL
-      subset <- NULL
+      subset <- input$selectionheatmap
       palette <- input$heatmapcolor
       #Check if the user wants to subset the matrix
       if(!is.null(subset)){
@@ -756,7 +776,7 @@ server <- function(input, output, session) {
         dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
         grouping <- NULL
         color_groups <- NULL
-        subset <- NULL
+        subset <- input$selectionheatmap
         palette <- input$heatmapcolor
         createHeatmap(data_table, file, scale = scale, cluster_cols = cluster_cols,
                       cluster_rows = cluster_rows, dendrogram_cols = dendrogram_cols,
