@@ -227,22 +227,35 @@ ui <- fluidPage(
 # Server ####
 server <- function(input, output, session) {
     source("prelim_script.R")
+  
+    # validate order of labels and meta_data
+    # substitute " " in col names with "_"
+  
+    # observeEvent(input$upload, validate(
+      # need({
+        # infile <- input$upload
+        # cat(infile$datapath)
+        # infile$datapath != ""
+      # }, "select another file")
+    # )
+    # )
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
     metadata <- reactive({
         req(infile <- input$upload)
-        read.xlsx(infile$datapath, "meta_data", rowNames = T, colNames=T)
+        read.xlsx(infile$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_")
     })
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
         req(infile <- input$upload)
-        read.xlsx(infile$datapath, "labels", colNames = T)
+        read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
     })
-    # Load 'grand_table' Data and Evaluate completenes. 
+    # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
         req(infile <- input$upload)
-        dat <- read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T)
-        meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T)
+        dat <- read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
+        cat(colnames(dat))
+        meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         vec <- rownames(dat) == meta_data$animal 
         #The following command should return true
         all(vec) == TRUE
@@ -251,11 +264,26 @@ server <- function(input, output, session) {
         vec <- colnames(dat) == labels()$colnames
         #The following command should return true
         all(vec) == TRUE
+        # cat(colnames(dat))
+        # validate that all values are numeric
+        for (i in dat) {
+          if (class(i) != "numeric"){
+            showModal(modalDialog(
+              title = "Value Error", 
+              "Not all data in 'grand_table' seems to be numeric. 
+              Please make sure, that all values in 'grand_table' are a number.", 
+              easyClose = T
+            ))
+          }
+        }
+        # cat(unlist(meta_data))
         # returns the data if all tests are passed
         return(dat)
     })
+    
+    
     # This is not used rn, but displays selected Labels
-    output$selected_format <- renderPrint(input$dfcorrmatrix)    
+    # output$selected_format <- renderPrint(input$dfcorrmatrix)    
     # Display Data when loaded correctly
     output$datatable <- renderDataTable({
       datatable(
