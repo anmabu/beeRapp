@@ -18,6 +18,9 @@ suppressPackageStartupMessages({
 # install.packages("future", dependencies = T)
 # if(interactive()){
 plan(multisession)
+# Global Variables ####
+color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
+
 # UI ####
 ui <- fluidPage(
     # theme = bslib::bs_theme(bootswatch = "flatly"),
@@ -57,7 +60,7 @@ ui <- fluidPage(
                 box(
                   div(style = "display:inline-block", actionButton("corrselectall", "Select All")), 
                   div(style = "display:inline-block", actionButton("corrselectnone", "Select None")),
-                  div(style = "height:300px;overflow-y: scroll;width:100%", uiOutput("selectlabels")), 
+                  div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabels")), 
                   # div(style = "height:300px;overflow-y: scroll; width:100%", checkboxGroupInput("selection", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames)), 
                   
                   title = "Select Variables", width = 12, collapsible = T, 
@@ -94,7 +97,7 @@ ui <- fluidPage(
                   title  = "Pairwise Correlations", width = 12, collapsible = F, solidHeader = T, status = "primary"
                 )
               # verbatimTextOutput("selected_format"),
-              # make options to selece/deselect all Values
+              # make options to select/deselect all Values
               # make options to deselect Values
             )
           ), 
@@ -114,8 +117,15 @@ ui <- fluidPage(
                 column(6, 
                   uiOutput("colorgroups")
                 ),
+           
               title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
               ), 
+              # box(
+              #   column(12, 
+              uiOutput("pair_color_picker"),
+              # title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary" 
+              # ),
+            
               # box(
               #  column(6, 
               #         radioButtons("paircolor.one", "Choose First Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#D55E00")), 
@@ -137,8 +147,8 @@ ui <- fluidPage(
                 numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
                 downloadButton("downboxplots", "Download"),
                 div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
-                                                                choiceNames = c(".pdf (All plots)", ".pptx (All plots)"), 
-                                                                choiceValues = c("pdf", "pptx"))), 
+                                                                choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperatly as .pdf)"), 
+                                                                choiceValues = c("pdf", "pptx", "zip"))), 
               title = "Boxplots", width = 12, solidHeader = T, collapsible = F, status = "primary" 
               )
             )
@@ -167,9 +177,12 @@ ui <- fluidPage(
               ), 
               box(
                 column(6, 
-                  radioButtons("boxcolor.one", "Choose First Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#D55E00")), 
+                  radioButtons("boxcolor.one", "Choose First Color", choices = color_values, selected = "#D55E00")), 
                 column(6, 
-                  radioButtons("boxcolor.two", "Choose Second Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#5D3A9B")),
+                  radioButtons("boxcolor.two", "Choose Second Color", choices = color_values, selected = "#5D3A9B")),
+                column(12, 
+                  textInput("choose_add_boxcolor", "Add Custom Color", placeholder = "Color in Hex Code"), 
+                  actionButton("add_boxcolor.button", "Add Color to Palette")),
                 title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
               )
             ) 
@@ -195,6 +208,7 @@ ui <- fluidPage(
                   column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                  column(2, radioButtons("scaled.button", "Scale Values?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
                   fluidRow(
                     column(12, 
                            div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
@@ -253,8 +267,8 @@ server <- function(input, output, session) {
     # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
         req(infile <- input$upload)
-        dat <- read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
-        cat(colnames(dat))
+        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
+        # cat(colnames(dat))
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         vec <- rownames(dat) == meta_data$animal 
         #The following command should return true
@@ -338,9 +352,11 @@ server <- function(input, output, session) {
       color_groups <- NULL
       animal_label <- input$pairID
       if (req(input$select_colorgroups) != "None"){
+        req(paircolor())
         grouping <- pairgroups()
         color_groups <- paircolor()
       }
+      # cat(color_groups)
        # runs until the first pair is true and displays it
       for (i in 1:(ncol(data_table)-1)){
         for (j in (i+1):ncol(data_table)){
@@ -412,11 +428,54 @@ server <- function(input, output, session) {
       radioButtons("select_colorgroups", "Color by group", choices, selected="None") 
     })
     paircolor <- reactive({
-      cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+      # cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
       # colors <- list("blue", "red", "green")
+      cbbPalette <- c()
+      req(length_pair_color())
+      req(input$select_colorgroups)
+      if (length_pair_color() == 1 | input$select_colorgroups == "None"){
+        cbbPalette <- c("#000000")
+        return(cbbPalette)
+      } 
+      if (length_pair_color() > 1){ 
+        # for (i in 1:length_pair_color()){
+        new_list <- lapply(1:length_pair_color(), function(x){
+          input_value <- input[[paste0('pair_color.', x)]]  # use this input type for dynamic input
+          # the following variable name of cbbPalette is a bit weird but it works
+          cbbPalette <- c(cbbPalette, input_value)
+          return(cbbPalette)
+        })
+      cbbPalette <- c(new_list)
+      }
+      cat(unlist(cbbPalette))
       return(cbbPalette)
     })
     
+    
+    length_pair_color <- eventReactive(input$select_colorgroups, {
+      req(input$select_colorgroups)
+      if (!input$select_colorgroups == "None"){
+        column_set <- unique(metadata()[input$select_colorgroups])
+        column_set <- strsplit(unlist(column_set), " ")
+        # cat(length(column_set))
+        return (length(column_set))
+      } 
+    })
+    
+    output$pair_color_picker <- renderUI({
+      req(length_pair_color())
+      column_width = as.integer(12 / length_pair_color())
+      if (length_pair_color() > 1){
+          box(
+            lapply(1:length_pair_color(), function(x){
+            column(column_width, 
+              radioButtons(paste0("pair_color.", x), "", choices = color_values))}), 
+           #  column(column_width, 
+          #     radioButtons("pair_color.two", "", choices = box_color_values)),
+            title = "Choose Colors", solidHeader = T, collapsible = T, status = "primary", width = 12
+          )
+        }
+    })
     ### Groups Pairwise Correlation####
     pairgroups <- reactive({
       # cat(input$select_colorgroups)
@@ -596,6 +655,14 @@ server <- function(input, output, session) {
       return(comp)
     })
     
+    observeEvent(input$add_boxcolor.button, {
+      req(input$choose_add_boxcolor)
+      newVal <- input$choose_add_boxcolor
+      updatedValues <- c(color_values, newVal)
+      updateRadioButtons(session, "boxcolor.one", choices = updatedValues)
+      updateRadioButtons(session, "boxcolor.two", choices = updatedValues)
+    })
+    
     ### Color Boxplots ####
     output$colorboxplot <- renderUI({
       data_choices <- req(colnames(metadata()))
@@ -635,6 +702,9 @@ server <- function(input, output, session) {
           return(name)
         } else if (input$downboxformat == "pdf"){
           name <- "boxplots.pdf"
+          return(name)
+        } else if (input$downboxformat == "zip"){
+          name <- "boxplots.zip"
           return(name)
         }
       },
@@ -686,7 +756,7 @@ server <- function(input, output, session) {
       # had to remove 'my' from 'my.breaks' in lines 423 + 424
       # createHeatmap(inputdata(), file = NULL)
       data_table <- inputdata()
-      scale <- TRUE
+      scale <- eval(parse(text = input$scaled.button))
       cluster_cols <- cols_cluster()
       cluster_rows <- rows_cluster()
       dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))
@@ -797,7 +867,7 @@ server <- function(input, output, session) {
       content <- function(file){
         data_table <- inputdata()
         file <- file
-        scale <- TRUE
+        scale <- eval(parse(text=input$scaled.button))
         cluster_cols <- cols_cluster()
         cluster_rows <- rows_cluster()
         dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))

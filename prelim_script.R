@@ -264,6 +264,9 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
   if(format == "pptx"){
     doc = officer::read_pptx()
   }
+  if(format == "zip"){   
+    fs <- c()
+  }
   
   #Change the grouping variable to a factor
   grouping = factor(grouping)
@@ -364,7 +367,14 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
       p = p + ggplot2::annotate(geom = "text", label = lab1, 
                                 x = 1.5, 
                                 y = 1.1*ymax, size = 4.5, color ="black", fontface="italic")
-      
+      if (format == "zip"){
+        # y_lab <- gsub("%", "percent", y_lab)
+        # y_lab <- gsub("/", "per", y_lab)
+        fs <- c(fs, paste0(labels$colnames[i], ".pdf"))
+        pdf(paste0(labels$colnames[i], ".pdf"), height = 4, width = 3)
+        print(p)
+        dev.off()
+      }
       
       if(format == "pptx"){
         doc = officer::add_slide(doc)
@@ -373,6 +383,13 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
       
     }
     
+  }
+  if (format == "zip"){
+    zip(zipfile = file, files = fs)
+    # clean up pdf files in working directory after zipping together
+    for (elem in fs){
+      system(paste("rm -f", elem)) 
+    }
   }
   if(format == "pptx"){
     print(doc, target = file) 
