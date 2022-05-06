@@ -27,7 +27,7 @@ ui <- fluidPage(
     # titlePanel("First Version"),
   dashboardPage(
     # skin = "purple",
-    dashboardHeader(title = "Behavior Analysis"), 
+    dashboardHeader(title = "behavioranalyzeR"), 
     dashboardSidebar(
       sidebarMenu(
         # menuItem("Welcome!", tabName = "welcome"),
@@ -209,6 +209,7 @@ ui <- fluidPage(
                   column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
                   column(2, radioButtons("scaled.button", "Scale Values?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                  column(2, radioButtons("grouping.button", "Grouping?", choices = c("Yes" = T, "No" = F), selected = F)),
                   fluidRow(
                     column(12, 
                            div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
@@ -218,6 +219,11 @@ ui <- fluidPage(
               )
             )
           ), 
+          fluidRow(
+            column(12, 
+                uiOutput("groups_heatmap")
+                   )
+          ),
           
           fluidRow(
             column(12, 
@@ -270,15 +276,67 @@ server <- function(input, output, session) {
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
         # cat(colnames(dat))
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
+        labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        #SANITY CHECKS
+        
+        #1. The meta_data table should contain all animal id's as in the data_table. If not the case, an error message should be produced
+        
+        if(!all(meta_data$animal %in% rownames(dat)) | !all(rownames(dat) %in% meta_data$animal)){
+          showModal(modalDialog(
+            title = "Input Error", 
+             "Not all animals IDs are present in the data table or meta data table.", 
+            easyClose = T
+          ))
+          #Produce error message "Not all animals IDs are present in the data table or meta data table"
+        }
+        
+        #2. The data_table contains the animal id as row names. Check if they are in the same order as in the meta_data table
+        #If this is not the case, then reorder the meta_data table to match the data_table 
+        #This is however only performed if the dimensions of the tables match and all animal IDs are available in both tables
+        
         vec <- rownames(dat) == meta_data$animal 
-        #The following command should return true
-        all(vec) == TRUE
-        #2. The lables table contains the description of the behavioural variables (columns in the data_table). Check if the colnames are 
-        #All present in the labels table
-        vec <- colnames(dat) == labels()$colnames
-        #The following command should return true
-        all(vec) == TRUE
-        # cat(colnames(dat))
+        
+        if(all(vec) == TRUE  & nrow(dat) == nrow(meta_data) & all(meta_data$animal %in% rownames(dat))){
+          meta_data = meta_data[base::match(rownames(dat), meta_data$animal),]
+        }else{
+          showModal(modalDialog(
+            title = "Input Error", 
+            "Please make sure that the animal IDs match in the data and meta data tables.", 
+            easyClose = T
+          ))
+          #Produce an error message: "Please make sure that the animal IDs match in the data and meta data tables")
+        }
+        
+        #3. The labels table contains the description of the behavioral variables (columns in the data_table). Check if the column names are 
+        #all present in the labels table. If they are not, produce an error message
+        
+        if(!all(labels$colnames %in% colnames(dat)) | !all(colnames(dat) %in% labels$colnames)){
+          showModal(modalDialog(
+            title = "Input Error", 
+            "Not all animals IDs are present in the meta data table.", 
+            easyClose = T
+          ))
+          #Produce error message "Not all animals IDs are present in the meta data table"
+        }
+        
+        
+        #4. Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
+        #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
+        
+        vec <- colnames(dat) == labels$colnames
+        
+        if(all(vec) == TRUE & ncol(dat) == nrow(labels) & all(labels$colnames %in% colnames(dat))){
+          
+          labels = labels[base::match(colnames(dat), labels$colnames),]
+          
+        }else{
+          showModal(modalDialog(
+            title = "Input Error", 
+            "Please make sure that the column names in the data table match the labels in the labels table.", 
+            easyClose = T
+          ))
+          #Produce an error message: "Please make sure that the column names in the data table match the labels in the labels table")
+        }
         # validate that all values are numeric
         for (i in dat) {
           if (class(i) != "numeric"){
@@ -351,8 +409,8 @@ server <- function(input, output, session) {
       grouping <- NULL
       color_groups <- NULL
       animal_label <- input$pairID
+      req(paircolor())
       if (req(input$select_colorgroups) != "None"){
-        req(paircolor())
         grouping <- pairgroups()
         color_groups <- paircolor()
       }
@@ -447,19 +505,17 @@ server <- function(input, output, session) {
         })
       cbbPalette <- c(new_list)
       }
-      cat(unlist(cbbPalette))
+      # cat(unlist(cbbPalette))
       return(cbbPalette)
     })
     
-    
+    # how many different variables are in a group
     length_pair_color <- eventReactive(input$select_colorgroups, {
+      print(length_color <- length(levels(factor(pairgroups()))))
       req(input$select_colorgroups)
       if (!input$select_colorgroups == "None"){
-        column_set <- unique(metadata()[input$select_colorgroups])
-        column_set <- strsplit(unlist(column_set), " ")
-        # cat(length(column_set))
-        return (length(column_set))
-      } 
+        return (length(levels(factor(pairgroups()))))
+      } else (return(1))
     })
     
     output$pair_color_picker <- renderUI({
@@ -469,7 +525,7 @@ server <- function(input, output, session) {
           box(
             lapply(1:length_pair_color(), function(x){
             column(column_width, 
-              radioButtons(paste0("pair_color.", x), "", choices = color_values))}), 
+              radioButtons(paste0("pair_color.", x), NULL, choices = color_values))}), 
            #  column(column_width, 
           #     radioButtons("pair_color.two", "", choices = box_color_values)),
             title = "Choose Colors", solidHeader = T, collapsible = T, status = "primary", width = 12
@@ -659,6 +715,7 @@ server <- function(input, output, session) {
       req(input$choose_add_boxcolor)
       newVal <- input$choose_add_boxcolor
       updatedValues <- c(color_values, newVal)
+      color_values <<- updatedValues  #super-assign operator
       updateRadioButtons(session, "boxcolor.one", choices = updatedValues)
       updateRadioButtons(session, "boxcolor.two", choices = updatedValues)
     })
@@ -687,11 +744,7 @@ server <- function(input, output, session) {
     boxplotgroups <- reactive({
       req(input$select_boxgroups)
       group <- metadata()[,c(input$select_boxgroups)]
-      # max_group <- max(as.numeric(factor(group)))
-      # cat(max(as.numeric(factor(group))))
-      # if (max_group == 2) { 
       return(group)
-      # }
     })
     
     ### Download Boxplots ####
@@ -739,6 +792,74 @@ server <- function(input, output, session) {
         return (T)
       } else {return(F)}
     })
+    ### Color Groups Heatmap ####
+    length_heatmap_color <- reactive({
+      req(color_groups.heatmap())
+      return (length_color <- length(levels(factor(color_groups.heatmap()))))
+    })
+    
+    output$heatmap_color_picker <- renderUI({
+      req(length_heatmap_color())
+      # print(length_heatmap_color())
+      # column_width = as.integer(12 / length_pair_color())
+      fluidRow(column(12, h5("Select Colors")))
+      if (length_heatmap_color() > 0){
+          lapply(1:length_heatmap_color(), function(x){
+            fluidRow(
+                   radioButtons(paste0("group_color_heatmap.", x), paste0("Select color ", x), choices = color_values, inline= T))})
+      }
+    })
+    
+    # make box for UI (for some reason can't do this directly in renderUI)
+    makeUIgroups <- function(input, output, session, coll, choices) {
+      box(
+        column(2, radioButtons("select_colorgroups.heatmap", "Color by group", choices)), 
+        column(10, uiOutput("heatmap_color_picker")),
+        title = "Heatmap Grouping Settings", collapsible = T, status = "primary", solidHeader = T, collapsed = coll, width = 12
+      )}
+    
+    # observeEvent(input$select_colorgroups.heatmap, {
+    #   print(heat_groups_color())
+      # print(color_groups.heatmap())
+    # })
+    
+    # renders box above
+    output$groups_heatmap <- renderUI({
+      data_choices <- req(colnames(metadata()))  # only add when 2 or more different values?
+      choices <- c(data_choices)
+      if (req(input$grouping.button)) {
+        makeUIgroups(input, output, session, F, choices)
+      } else {
+        makeUIgroups(input, output, session, T, choices)
+      }
+    })
+    
+    # outputs the colors for the groups in a list
+    heat_groups_color <- reactive({
+      req(color_groups.heatmap())
+      req(length_heatmap_color())
+      if (length_heatmap_color() == 1){
+        cbbPalette <- c(input[[paste0('group_color_heatmap.1')]])
+        return(cbbPalette)
+      } else 
+      if (length_heatmap_color() > 1){ 
+        empty_list <- c()
+        new_list <- lapply(1:length_heatmap_color(), function(x){
+          input_value <- input[[paste0('group_color_heatmap.', x)]]  # use this input type for dynamic input
+          empty_list <- c(empty_list, input_value)
+        })
+        return(new_list)
+      }
+   
+    })
+    
+    # returns the groups to color for the heatmap
+    color_groups.heatmap <- reactive({
+      group <- metadata()[,c(input$select_colorgroups.heatmap)]
+      return(group)
+    })
+
+    
     ### Select Labels Heatmap ####
     output$selectlabelsheatmap <- renderUI({
       checkboxGroupInput("selectionheatmap", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
@@ -755,6 +876,9 @@ server <- function(input, output, session) {
     output$exampleheatmap <- renderPlot({
       # had to remove 'my' from 'my.breaks' in lines 423 + 424
       # createHeatmap(inputdata(), file = NULL)
+   
+      # req(color_groups.heatmap())
+      # req(heat_groups_color())
       data_table <- inputdata()
       scale <- eval(parse(text = input$scaled.button))
       cluster_cols <- cols_cluster()
@@ -765,6 +889,11 @@ server <- function(input, output, session) {
       color_groups <- NULL
       subset <- input$selectionheatmap
       palette <- input$heatmapcolor
+      # for some reason the function is called twice and during the first round not all colors are picked, resulting in a warning
+      if (req(input$grouping.button)){
+        grouping <- color_groups.heatmap()
+        color_groups <- unlist(heat_groups_color())
+      }
       #Check if the user wants to subset the matrix
       if(!is.null(subset)){
         data_table = data_table[,subset]
@@ -872,8 +1001,8 @@ server <- function(input, output, session) {
         cluster_rows <- rows_cluster()
         dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))
         dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
-        grouping <- NULL
-        color_groups <- NULL
+        grouping <- color_groups.heatmap()
+        color_groups <- unlist(heat_groups_color())
         subset <- input$selectionheatmap
         palette <- input$heatmapcolor
         createHeatmap(data_table, file, scale = scale, cluster_cols = cluster_cols,
