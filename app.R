@@ -26,24 +26,32 @@ ui <- fluidPage(
     # theme = bslib::bs_theme(bootswatch = "flatly"),
     # titlePanel("First Version"),
   dashboardPage(
-    # skin = "purple",
     dashboardHeader(title = "behavioranalyzeR"), 
     dashboardSidebar(
       sidebarMenu(
-        # menuItem("Welcome!", tabName = "welcome"),
-        menuItem("Import Data", tabName = "importdata"), 
-        menuItem("Analysis", tabName = "analysis", 
-                 menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), 
-                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations"), 
-                 menuSubItem("Boxplots", tabName = "boxplots"), 
-                 menuSubItem("Heatmap", tabName = "heatmap"), 
-                 menuSubItem("Clustering", tabName = "clustering"), 
+        menuItem("Welcome", tabName = "welcome", icon = icon("compass", lib = "font-awesome")),
+        menuItem("Import Data", tabName = "importdata", icon = icon("file-medical")), 
+        menuItem("Analysis", tabName = "analysis", icon = icon("biohazard"), 
+                 menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), # icon = icon("handshake")), 
+                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations"), # , icon = icon("dice-two")), 
+                 menuSubItem("Boxplots", tabName = "boxplots"), #, icon = icon("box")), 
+                 menuSubItem("Heatmap", tabName = "heatmap"), #, icon = icon("fire")), 
+                 menuSubItem("Clustering", tabName = "clustering"), #, icon=icon("circle")), 
                  menuSubItem("PCA", tabName = "pca")
         )       
       )
     ),
     dashboardBody(
       tabItems(
+        ## Welcome ####
+        tabItem(tabName = "welcome", 
+                fluidRow(
+                  column(12, 
+                         # box(
+                           h3("Welcome to behavioranalyzeR!")
+                         #   title = "", solidHeader = T, status = "primary", collapsible = F, width = 12
+                         # ))
+                ))),
         ## Import Data ####
         tabItem(tabName = "importdata", 
                 fluidRow(
@@ -162,7 +170,6 @@ ui <- fluidPage(
               )
             ), 
             column(4, 
-              # h4("Plot Settings"), 
               box(
                 column(4, 
                   uiOutput("colorboxplot")
@@ -296,15 +303,18 @@ server <- function(input, output, session) {
         
         vec <- rownames(dat) == meta_data$animal 
         
-        if(all(vec) == TRUE  & nrow(dat) == nrow(meta_data) & all(meta_data$animal %in% rownames(dat))){
-          meta_data = meta_data[base::match(rownames(dat), meta_data$animal),]
-        }else{
+        
+        if(all(vec) == FALSE  & nrow(data_table) == nrow(meta_data) & all(meta_data$animal %in% rownames(data_table))){
+          meta_data = meta_data[base::match(rownames(data_table), meta_data$animal),]
+        }
+        
+        if(all(vec) == FALSE & (nrow(data_table) != nrow(meta_data) | !all(meta_data$animal %in% rownames(data_table)))){
+          #Produce an error message: "Please make sure that the animal IDs match in the data and meta data tables")
           showModal(modalDialog(
             title = "Input Error", 
             "Please make sure that the animal IDs match in the data and meta data tables.", 
             easyClose = T
           ))
-          #Produce an error message: "Please make sure that the animal IDs match in the data and meta data tables")
         }
         
         #3. The labels table contains the description of the behavioral variables (columns in the data_table). Check if the column names are 
@@ -325,17 +335,16 @@ server <- function(input, output, session) {
         
         vec <- colnames(dat) == labels$colnames
         
-        if(all(vec) == TRUE & ncol(dat) == nrow(labels) & all(labels$colnames %in% colnames(dat))){
-          
-          labels = labels[base::match(colnames(dat), labels$colnames),]
-          
-        }else{
+        if(all(vec) == FALSE & ncol(data_table) == nrow(labels) & all(labels$colnames %in% colnames(data_table))){
+          labels = labels[base::match(colnames(data_table), labels$colnames),]
+        }
+        if(all(vec) == FALSE & (ncol(data_table) != nrow(labels) | !all(labels$colnames %in% colnames(data_table)))){
+          #Produce an error message: "Please make sure that the column names in the data table match the labels in the labels table")
           showModal(modalDialog(
             title = "Input Error", 
             "Please make sure that the column names in the data table match the labels in the labels table.", 
             easyClose = T
           ))
-          #Produce an error message: "Please make sure that the column names in the data table match the labels in the labels table")
         }
         # validate that all values are numeric
         for (i in dat) {
@@ -485,6 +494,19 @@ server <- function(input, output, session) {
       choices <- c(choices, data_choices)
       radioButtons("select_colorgroups", "Color by group", choices, selected="None") 
     })
+    
+    observeEvent(input$add_paircolor.button, {
+      req(input$choose_add_paircolor)
+      req(length_pair_color())
+      newVal <- input$choose_add_paircolor
+      updatedValues <- c(color_values, newVal)
+      color_values <<- updatedValues  #super-assign operator
+      for (i in 1:length_pair_color()){
+        updateRadioButtons(session, paste0("pair_color.", i), choices = updatedValues)
+      }
+      # updateRadioButtons(session, "boxcolor.one", choices = updatedValues)
+      # updateRadioButtons(session, "boxcolor.two", choices = updatedValues)
+    })
     paircolor <- reactive({
       # cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
       # colors <- list("blue", "red", "green")
@@ -505,13 +527,11 @@ server <- function(input, output, session) {
         })
       cbbPalette <- c(new_list)
       }
-      # cat(unlist(cbbPalette))
       return(cbbPalette)
     })
     
     # how many different variables are in a group
     length_pair_color <- eventReactive(input$select_colorgroups, {
-      print(length_color <- length(levels(factor(pairgroups()))))
       req(input$select_colorgroups)
       if (!input$select_colorgroups == "None"){
         return (length(levels(factor(pairgroups()))))
@@ -524,22 +544,21 @@ server <- function(input, output, session) {
       if (length_pair_color() > 1){
           box(
             lapply(1:length_pair_color(), function(x){
+              # dynamically render radio buttons
             column(column_width, 
               radioButtons(paste0("pair_color.", x), NULL, choices = color_values))}), 
-           #  column(column_width, 
-          #     radioButtons("pair_color.two", "", choices = box_color_values)),
+            textInput("choose_add_paircolor", "Add Custom Color", placeholder = "Color in Hex Code"), 
+            actionButton("add_paircolor.button", "Add Color to Palette"),
             title = "Choose Colors", solidHeader = T, collapsible = T, status = "primary", width = 12
           )
         }
     })
     ### Groups Pairwise Correlation####
     pairgroups <- reactive({
-      # cat(input$select_colorgroups)
       if (input$select_colorgroups == "None"){
         return(NULL)
       } else {
         group <- metadata()[,c(input$select_colorgroups)]
-        # cat(group)
         return(group)
       }
       })
