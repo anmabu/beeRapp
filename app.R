@@ -240,9 +240,37 @@ ui <- fluidPage(
               )
             )
           )
-        )
+        ), 
       ## Clustering ####
+      tabItem(tabName = "clustering", 
+          fluidRow(column(12, 
+                    box(plotOutput("exampleclustering"), 
+                        title = "Clustering", width = 12, solidHeader = T, status = "primary")    
+                )
+            )
+        ),
       ## PCA ####
+      
+      tabItem(tabName = "pca", 
+          fluidRow(column(12,
+                    box(
+                      column(2, radioButtons("pca_animal_id", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F)),
+                      column(2, uiOutput("colorgroups_pca")),
+                      column(8, uiOutput("pca_color_picker")),
+                      column(12, 
+                             div(style = "display:inline-block", downloadButton("down_pca")),
+                             div(style = "display:inline-block", radioButtons("pca_down.type", NULL, choices = c(".pdf"))),
+                      style = "margin-left: -15px"),
+                      title = "PCA Settings", width = 12, solidHeader = T, status = "primary"
+                    )
+                )
+          ),
+          fluidRow(column(12, 
+                     box(plotOutput("examplepca"), 
+                         title = "PCA", width = 12, solidHeader = T, status = "primary")
+                     )
+          )
+        )
       )
     )
   )
@@ -1030,6 +1058,324 @@ server <- function(input, output, session) {
                       subset = subset, palette = palette)
       }
     )
+     ## Clustering ####
+    ### Example Clustering ####
+    output$exampleclustering <- renderPlot({
+      data_table <- inputdata()
+      file <- NULL
+      algorithm  = "GMM"
+      n_clusters=2
+      color_groups = NULL 
+      animal_label = FALSE
+      meta_data <- metadata()
+      #Convert to a data frame if only one varible is selected
+      data_table = data.frame(data_table)
+      animal = meta_data$animal
+      #Perform Gaussian mixture model clustering per default
+      
+      if(algorithm == "GMM"){
+        
+        clustering = mclust::Mclust(data_table, G = n_clusters)
+        
+        clusters = clustering$classification
+      }else{
+        
+        clustering = stats::kmeans(x = data_table, centers = n_clusters)
+        
+        clusters = clustering$cluster
+      }
+      
+      
+      #Create plots with the clustering results. 
+      
+      #Option 1 - only one variable was provided for clustering
+      
+      if(ncol(data_table) == 1){
+        
+        colnames(data_table) = "InputVar"
+        
+        p =  ggplot2::ggplot(data_table, aes(y = InputVar, x  =factor(1), color = factor(clusters))) + 
+          ggplot2::geom_point(size = 2.5) +
+          ggplot2::theme_test(base_size = 14) +
+          ggplot2::theme(axis.text.y = ggplot2::element_text(color  ="black"),
+                         axis.text.x = ggplot2::element_blank(),
+                         axis.ticks.x = ggplot2::element_blank()) +
+          ggplot2::labs(x = "", color = "cluster")
+        
+        
+        #Add custom colors if provided by the user
+        
+        if(length(color_groups)>= length(unique(clusters))){
+          
+          p = p + ggplot2::scale_color_manual(values  =color_groups)
+        }
+        
+        
+        #Add animal labels if requested
+        if(animal_label == TRUE){
+          p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        }
+        
+        #Define height and width for the plot
+        h = 3
+        w = 4
+        
+      }
+      
+      #Option 2 - if two variables are provided for clustering, create a scatter plot with them
+      
+      if(ncol(data_table) == 2){
+        
+        p =  ggplot2::ggplot(data_table, aes(x = data_table[,1] , y  = data_table[,2], 
+                                             color = factor(clusters))) + 
+          ggplot2::geom_point(size = 2.5) +
+          ggplot2::theme_test(base_size = 14) +
+          ggplot2::theme(axis.text = ggplot2::element_text(color  ="black")) +
+          ggplot2::labs(color = "cluster", x  ="InputVar 1", y  = "InputVar 2") +
+          ggplot2::stat_ellipse()
+        
+        
+        #Add custom colors if provided by the user
+        
+        if(length(color_groups)>= length(unique(clusters))){
+          
+          p = p + ggplot2::scale_color_manual(values  =color_groups)
+        }
+        
+        #Add animal labels if requested
+        if(animal_label == TRUE){
+          p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        }
+        
+        
+        #Define height and width for the plot
+        h = 4
+        w = 5
+        
+      }
+      
+      
+      #Option 3 - if 3 or more variables are provided for clustering, a PCA using the input is shown
+      
+      if(ncol(data_table)>2){
+        
+        pca_res <- mixOmics::pca(data_table, ncomp = 2, scale = TRUE)
+        
+        pca_data = data.frame(pca_res$variates$X)
+        pca_data$animal = rownames(data_table)
+        
+        var1 = round(pca_res$cum.var[1]*100,2)
+        var2 =  round((pca_res$cum.var[2] - pca_res$cum.var[1])*100,2)
+        
+        p = ggplot2::ggplot(pca_data, ggplot2::aes(x = PC1, y = PC2, col = factor(clusters))) +
+          ggplot2::geom_point(size=2.5) +
+          ggplot2::theme_test(base_size = 14) +
+          ggplot2::theme(axis.text = ggplot2::element_text(colour  = "black")) +
+          ggplot2::labs(x = paste0("PC1 (", var1, "%)"), y = paste0("PC2 (", var2, "%)"),
+                        col  ="cluster") +
+          ggplot2::stat_ellipse()
+        
+        #Add custom colors if the user specified them
+        
+        if(length(color_groups)>= length(unique(clusters))){
+          p = p + ggplot2::scale_color_manual(values = color_groups) 
+        }
+        
+        
+        #Add animal labels if true
+        
+        if(animal_label == TRUE){
+          p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, 
+                                            max.overlaps = Inf, size=2)
+        }
+        
+        h = 4
+        w = 5
+        
+      }
+      return(p)
+    })
+    
+    
+    ## PCA ####
+    
+    ### Color Groups PCA ####
+   
+    output$colorgroups_pca <- renderUI({
+      data_choices <- req(colnames(metadata()))
+      possible_choices <- c("None")
+      for (col in data_choices){
+        possible_choices <- c(possible_choices, col)
+      }
+      choices <- c(possible_choices)
+      radioButtons("select_pcagroups", "Color by group", choices) 
+    })
+    
+    # return selected group with data
+    pca_groups <- reactive({
+      if (input$select_pcagroups == "None"){
+        return(NULL)
+      } else {
+        group <- metadata()[,c(input$select_pcagroups)]
+        return(group)
+      }
+    })
+    
+    length_pca_color <- eventReactive(input$select_pcagroups, {
+      req(input$select_pcagroups)
+      if (!input$select_pcagroups == "None"){
+        return (length(levels(factor(pca_groups()))))
+      } else (return(0))
+    })
+    
+    output$pca_color_picker <- renderUI({
+      req(length_pca_color())
+      fluidRow(column(12, h5("Select Colors")))
+      if (length_pca_color() > 0){
+        lapply(1:length_pca_color(), function(x){
+          fluidRow(
+            radioButtons(paste0("group_color_pca.", x), paste0("Select color ", x), choices = color_values, inline= T))})
+      }
+    })
+    
+    # outputs the colors for the groups in a list
+    pca_groups_color <- reactive({
+      req(pca_groups())
+      req(length_pca_color())
+      if (input$select_pcagroups == "None"){return(NULL)} 
+      if (length_pca_color() == 1){
+        cbbPalette <- c(input[[paste0('group_color_pca.1')]])
+        return(cbbPalette)
+      } else 
+        if (length_pca_color() > 1){ 
+          empty_list <- c()
+          new_list <- lapply(1:length_pca_color(), function(x){
+            input_value <- input[[paste0('group_color_pca.', x)]]  # use this input type for dynamic input
+            empty_list <- c(empty_list, input_value)
+          })
+          return(new_list)
+        }
+    })
+    ### Example PCA ####
+    output$examplepca <- renderPlot({
+      data_table <- inputdata()
+      file <- NULL
+      grouping <- NULL
+      color_groups <- NULL
+      animal_label <- input$pca_animal_id
+      
+      if (input$select_pcagroups != "None"){
+        grouping <- pca_groups()
+        color_groups <- unlist(pca_groups_color())
+      }
+      
+      if(any(is.na(data_table)) == FALSE){
+        
+        pca_res = stats::prcomp(data_table, scale. = TRUE)
+        
+        var1 = base::round(pca_res$sdev[1]^2/base::sum(pca_res$sdev^2)*100,2)
+        var2 = base::round(pca_res$sdev[2]^2/base::sum(pca_res$sdev^2)*100,2)
+        
+        
+        pca_data = base::data.frame(pca_res$x[,1:2])
+        pca_data$animal = rownames(data_table)
+        
+      }
+      
+      #Use the pca function from mixOmics if missing data are present
+      #If more than 40% of the values in a variable are missing, omit the variable
+      if(any(is.na(data_table)) == TRUE){
+        
+        #Get the percentage of missing data in each variable
+        
+        missing_data = base::vector()
+        
+        for (i in 1:ncol(data_table)){
+          v = base::is.na(data_table[,i]) == TRUE
+          
+          missing_data = c(missing_data, length(v[v==TRUE]))
+          
+        }
+        
+        missing_data = missing_data/nrow(data_table)
+        
+        #Get indices of columns that contain more than 50% missing values
+        ind = which(missing_data >= 0.4)
+        
+        #Drop the columns from the input
+        
+        data_table = data_table[,-ind]
+        
+        
+        #Check if there are enough variables
+        
+        try(if(ncol(data_table)<3)
+          stop("Not enough variables to perform PCA after removing missing values"))
+        
+        if(ncol(data_table)>=3){
+          
+          pca_res = mixOmics::pca(data_table, ncomp = 2, center = TRUE, scale = TRUE)
+          
+          pca_data = data.frame(pca_res$variates$X)
+          pca_data$animal = rownames(data_table)
+          
+          var1 = round(pca_res$cum.var[1]*100,2)
+          var2 =  round((pca_res$cum.var[2] - pca_res$cum.var[1])*100,2)
+          
+        }
+        
+      }
+      
+        #Plot the results
+      
+        if(ncol(pca_data) != 0){
+        
+        p = ggplot2::ggplot(pca_data, ggplot2::aes(x = PC1, y = PC2, col = grouping)) +
+          ggplot2::geom_point(size=2.5) +
+          ggplot2::theme_test(base_size = 14) +
+          ggplot2::theme(axis.text = ggplot2::element_text(colour  = "black")) +
+          ggplot2::labs(x = paste0("PC1 (", var1, "%)"), y = paste0("PC2 (", var2, "%)"),
+                        col  ="") +
+          ggplot2::stat_ellipse()
+        
+        #Add custom colors if the user specified them
+        
+        if(!is.null(grouping) & length(color_groups) >= length(unique(grouping))){
+          p = p + ggplot2::scale_color_manual(values = color_groups) 
+        }
+        #Add animal labels if true
+        if(animal_label == TRUE){
+          p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        }
+        if(is.null(grouping)){
+          h  = 3.5
+          w = 4
+        }else{
+          h=4
+          w = 5.5
+        }
+      }
+      return (p)  
+    })
+    
+    ### Download PCA ####
+    output$down_pca <- downloadHandler(
+      filename <- ("pca.pdf"), 
+      content <- function(file){
+        data_table <- inputdata()
+        file <- file
+        grouping <- NULL
+        color_groups <- NULL
+        animal_label <- input$pca_animal_id
+        
+        if (input$select_pcagroups != "None"){
+          grouping <- pca_groups()
+          color_groups <- unlist(pca_groups_color())
+        }
+        pcaAnalysis(data_table, file, grouping, color_groups, animal_label)
+      }  
+    )
 }
+
 # ?parallelly::supportsMulticore
 shinyApp(ui, server)

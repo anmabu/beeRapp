@@ -147,13 +147,13 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
   on.exit(progress$close())
   progress$set(message = "Creating plots", value = 0)
   #Calculate the correlations and create the plots
-  # for (i in 1:(ncol(data_table)-1)){
-  for (i in 1:5){  
+  for (i in 1:(ncol(data_table)-1)){
+  # for (i in 1:5){  
     # move progress bar
-    # progress$inc(1/(ncol(data_table)-1))
-    progress$inc(1/5)
-    # for (j in (i+1):ncol(data_table)){
-    for (j in (i+1):5){
+    progress$inc(1/(ncol(data_table)-1))
+    # progress$inc(1/5)
+    for (j in (i+1):ncol(data_table)){
+    # for (j in (i+1):5){
       #Calculate correlations 
       p.val = stats::cor.test(data_table[,i], data_table[,j], method = type)$p.value
       r = round(stats::cor.test(data_table[,i], data_table[,j], method = type)$estimate,2)
@@ -523,5 +523,276 @@ createHeatmap <- function(data_table, file, scale = TRUE, cluster_cols = FALSE,
   
   
 }
+
+# PCA ####
+#FUNCTION TO PERFORM Principal Component Analysis (PCA) with the input data
+
+#ARGUMENTS
+#data_table - the input data frame 
+#file - the output directory and file name to save the output
+#grouping = NULL - an optional argument to annotate groups that animals belong to
+#color_groups = NULL - an optional argument to specify the colors for the annotation 
+#animal_label - an argument set to FALSE, if TRUE, animal labels are shown next to the data points
+
+pcaAnalysis <- function(data_table, file, grouping = NULL, color_groups = NULL, 
+                        animal_label = FALSE){
+  
+  
+  #Check if there are missing data. If not, use the standard prcomp function
+  
+  if(any(is.na(data_table)) == FALSE){
+    
+    pca_res = stats::prcomp(data_table, scale. = TRUE)
+    
+    var1 = base::round(pca_res$sdev[1]^2/base::sum(pca_res$sdev^2)*100,2)
+    var2 = base::round(pca_res$sdev[2]^2/base::sum(pca_res$sdev^2)*100,2)
+    
+    
+    pca_data = base::data.frame(pca_res$x[,1:2])
+    pca_data$animal = rownames(data_table)
+    
+  }
+  
+  #Use the pca function from mixOmics if missing data are present
+  #If more than 40% of the values in a variable are missing, omit the variable
+  if(any(is.na(data_table)) == TRUE){
+    
+    #Get the percentage of missing data in each variable
+    
+    missing_data = base::vector()
+    
+    for (i in 1:ncol(data_table)){
+      v = base::is.na(data_table[,i]) == TRUE
+      
+      missing_data = c(missing_data, length(v[v==TRUE]))
+      
+    }
+    
+    missing_data = missing_data/nrow(data_table)
+    
+    #Get indices of columns that contain more than 50% missing values
+    ind = which(missing_data >= 0.4)
+    
+    #Drop the columns from the input
+    
+    data_table = data_table[,-ind]
+    
+    
+    #Check if there are enough variables
+    
+    try(if(ncol(data_table)<3)
+      stop("Not enough variables to perform PCA after removing missing values"))
+    
+    if(ncol(data_table)>=3){
+      
+      pca_res = mixOmics::pca(data_table, ncomp = 2, center = TRUE, scale = TRUE)
+      
+      pca_data = data.frame(pca_res$variates$X)
+      pca_data$animal = rownames(data_table)
+      
+      var1 = round(pca_res$cum.var[1]*100,2)
+      var2 =  round((pca_res$cum.var[2] - pca_res$cum.var[1])*100,2)
+      
+    }
+    
+  }
+  
+  #Plot the results
+  
+  if(ncol(pca_data) != 0){
+    
+    p = ggplot2::ggplot(pca_data, ggplot2::aes(x = PC1, y = PC2, col = grouping)) +
+      ggplot2::geom_point(size=2.5) +
+      ggplot2::theme_test(base_size = 14) +
+      ggplot2::theme(axis.text = ggplot2::element_text(colour  = "black")) +
+      ggplot2::labs(x = paste0("PC1 (", var1, "%)"), y = paste0("PC2 (", var2, "%)"),
+                    col  ="") +
+      ggplot2::stat_ellipse()
+    
+    #Add custom colors if the user specified them
+    
+    if(!is.null(grouping) & length(color_groups) >= length(unique(grouping))){
+      p = p + ggplot2::scale_color_manual(values = color_groups) 
+    }
+    
+    
+    #Add animal labels if true
+    
+    if(animal_label == TRUE){
+      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+    }
+    
+    if(is.null(grouping)){
+      h  = 3.5
+      w = 4
+    }else{
+      h=4
+      w = 5.5
+    }
+    
+    pdf(file, height = h, width= w)
+    # p
+    print(p)
+    dev.off()
+    
+  }
+  
+  
+}
+
+
+# Clustering ####
+#FUNCTION TO PERFORM CLUSTERING BASED ON SELECTED VARIABLES FROM THE INPUT DATA MATRIX
+
+#ARGUMENTS
+#data_table - the input data frame 
+#file - the output directory and file name to save the output visualizing the clustering
+#algorithm = "GMM" - per default, Gaussian mixture model clustering is performed, the user can also select "kmeans" 
+#n_clusters = 2, per default, at least 2 clusters are produced, the user can specify a higher number of clusters desired
+#color_groups = NULL - an optional argument to specify the colors for the produced clusters
+#animal_label - an argument set to FALSE, if TRUE, animal labels are shown next to the data points
+#meta_data - the table containing the meta data - used to extract the animal IDs
+
+clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=2,
+                               color_groups = NULL, animal_label  =FALSE,
+                               meta_data){
+  
+  #Convert to a data frame if only one varible is selected
+  data_table = data.frame(data_table)
+  animal = meta_data$animal
+  #Perform Gaussian mixture model clustering per default
+  
+  if(algorithm == "GMM"){
+    
+    clustering = mclust::Mclust(data_table, G = n_clusters)
+    
+    clusters = clustering$classification
+  }else{
+    
+    clustering = stats::kmeans(x = data_table, centers = n_clusters)
+    
+    clusters = clustering$cluster
+  }
+  
+  
+  #Create plots with the clustering results. 
+  
+  #Option 1 - only one variable was provided for clustering
+  
+  if(ncol(data_table) == 1){
+    
+    colnames(data_table) = "InputVar"
+    
+    p =  ggplot2::ggplot(data_table, aes(y = InputVar, x  =factor(1), color = factor(clusters))) + 
+      ggplot2::geom_point(size = 2.5) +
+      ggplot2::theme_test(base_size = 14) +
+      ggplot2::theme(axis.text.y = ggplot2::element_text(color  ="black"),
+                     axis.text.x = ggplot2::element_blank(),
+                     axis.ticks.x = ggplot2::element_blank()) +
+      ggplot2::labs(x = "", color = "cluster")
+    
+    
+    #Add custom colors if provided by the user
+    
+    if(length(color_groups)>= length(unique(clusters))){
+      
+      p = p + ggplot2::scale_color_manual(values  =color_groups)
+    }
+    
+    
+    #Add animal labels if requested
+    if(animal_label == TRUE){
+      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+    }
+    
+    #Define height and width for the plot
+    h = 3
+    w = 4
+    
+  }
+  
+  #Option 2 - if two variables are provided for clustering, create a scatter plot with them
+  
+  if(ncol(data_table) == 2){
+    
+    p =  ggplot2::ggplot(data_table, aes(x = data_table[,1] , y  = data_table[,2], 
+                                         color = factor(clusters))) + 
+      ggplot2::geom_point(size = 2.5) +
+      ggplot2::theme_test(base_size = 14) +
+      ggplot2::theme(axis.text = ggplot2::element_text(color  ="black")) +
+      ggplot2::labs(color = "cluster", x  ="InputVar 1", y  = "InputVar 2") +
+      ggplot2::stat_ellipse()
+    
+    
+    #Add custom colors if provided by the user
+    
+    if(length(color_groups)>= length(unique(clusters))){
+      
+      p = p + ggplot2::scale_color_manual(values  =color_groups)
+    }
+    
+    #Add animal labels if requested
+    if(animal_label == TRUE){
+      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+    }
+    
+    
+    #Define height and width for the plot
+    h = 4
+    w = 5
+    
+  }
+  
+  
+  #Option 3 - if 3 or more variables are provided for clustering, a PCA using the input is shown
+  
+  if(ncol(data_table)>2){
+    
+    pca_res <- mixOmics::pca(data_table, ncomp = 2, scale = TRUE)
+    
+    pca_data = data.frame(pca_res$variates$X)
+    pca_data$animal = rownames(data_table)
+    
+    var1 = round(pca_res$cum.var[1]*100,2)
+    var2 =  round((pca_res$cum.var[2] - pca_res$cum.var[1])*100,2)
+    
+    p = ggplot2::ggplot(pca_data, ggplot2::aes(x = PC1, y = PC2, col = factor(clusters))) +
+      ggplot2::geom_point(size=2.5) +
+      ggplot2::theme_test(base_size = 14) +
+      ggplot2::theme(axis.text = ggplot2::element_text(colour  = "black")) +
+      ggplot2::labs(x = paste0("PC1 (", var1, "%)"), y = paste0("PC2 (", var2, "%)"),
+                    col  ="cluster") +
+      ggplot2::stat_ellipse()
+    
+    #Add custom colors if the user specified them
+    
+    if(length(color_groups)>= length(unique(clusters))){
+      p = p + ggplot2::scale_color_manual(values = color_groups) 
+    }
+    
+    
+    #Add animal labels if true
+    
+    if(animal_label == TRUE){
+      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, 
+                                        max.overlaps = Inf, size=2)
+    }
+    
+    h = 4
+    w = 5
+    
+  }
+  
+  # pdf(file, height = h, width = w)
+  # print(p)
+  # dev.off()
+  
+  # return(clusters)
+}
+
+
+#Add the clustering variable to the meta_data
+meta_data$clustering = clusteringAnalysis(data_table, file, meta_data = meta_data)
+
 
 
