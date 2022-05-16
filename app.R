@@ -102,7 +102,7 @@ ui <- fluidPage(
                   div(style= "display:inline-block", radioButtons("dfpairmatrix", "", inline = TRUE, 
                               choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperately as .pdf)"), 
                               choiceValues = c(".pdf", ".pptx", ".zip"))), 
-                  title  = "Pairwise Correlations", width = 12, collapsible = F, solidHeader = T, status = "primary"
+                  title  = "Pairwise Correlations Settings", width = 12, collapsible = F, solidHeader = T, status = "primary"
                 )
               # verbatimTextOutput("selected_format"),
               # make options to select/deselect all Values
@@ -157,7 +157,7 @@ ui <- fluidPage(
                 div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
                                                                 choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperatly as .pdf)"), 
                                                                 choiceValues = c("pdf", "pptx", "zip"))), 
-              title = "Boxplots", width = 12, solidHeader = T, collapsible = F, status = "primary" 
+              title = "Boxplots Settings", width = 12, solidHeader = T, collapsible = F, status = "primary" 
               )
             )
           ), 
@@ -222,7 +222,7 @@ ui <- fluidPage(
                            div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
                            div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))))
                   ),
-                  title = "Heatmap", width = 12, solidHeader = T, status = "primary"      
+                  title = "Heatmap Settings", width = 12, solidHeader = T, status = "primary"      
               )
             )
           ), 
@@ -243,6 +243,19 @@ ui <- fluidPage(
         ), 
       ## Clustering ####
       tabItem(tabName = "clustering", 
+          fluidRow(column(12,
+                    box(uiOutput("selectlabelsclustering"), 
+                        title = "Select Variables", width = 12, solidHeader = T, status = "primary")
+                )
+            ),
+          fluidRow(column(12,
+                    box(
+                      selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
+                      numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
+                      radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F), 
+                    title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
+                )
+            ),
           fluidRow(column(12, 
                     box(plotOutput("exampleclustering"), 
                         title = "Clustering", width = 12, solidHeader = T, status = "primary")    
@@ -1058,17 +1071,17 @@ server <- function(input, output, session) {
                       subset = subset, palette = palette)
       }
     )
-     ## Clustering ####
+    ## Clustering ####
     ### Example Clustering ####
     output$exampleclustering <- renderPlot({
       data_table <- inputdata()
       file <- NULL
-      algorithm  = "GMM"
-      n_clusters=2
+      algorithm <- input$algorithmclustering
+      n_clusters <- input$numclusters
       color_groups = NULL 
-      animal_label = FALSE
+      animal_label <- input$idclustering
       meta_data <- metadata()
-      #Convert to a data frame if only one varible is selected
+      #Convert to a data frame if only one variable is selected
       data_table = data.frame(data_table)
       animal = meta_data$animal
       #Perform Gaussian mixture model clustering per default
