@@ -60,6 +60,36 @@ ui <- fluidPage(
                    dataTableOutput("datatable")
                   )
                 )), 
+        
+        ## Clustering ####
+        tabItem(tabName = "clustering", 
+                fluidRow(column(12,
+                                box(
+                                  div(style = "display:inline-block", actionButton("clusteringselectall", "Select All")), 
+                                  div(style = "display:inline-block", actionButton("clusteringselectnone", "Select None")),
+                                  div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabelsclustering")), 
+                                  title = "Select Variables", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = F)
+                )
+                ),
+                fluidRow(column(12,
+                                box(
+                                  selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
+                                  numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
+                                  radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F),
+                                  div(style = "display: inline-block", downloadButton("down_clustering")),
+                                  div(style = "display: inline-block", radioButtons("clustering.type", NULL, choices = c("pdf"))),
+                                  div(style = "display: block", downloadButton("clustering.save", "Save Clustering")),
+                                  helpText("Note: Saves clustering to metadata table and downloads the updated xlsx file."),
+                                  title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
+                )
+                ),
+                fluidRow(column(12, 
+                                box(plotOutput("exampleclustering"), 
+                                    title = "Clustering", width = 12, solidHeader = T, status = "primary")    
+                )
+                )
+        ),
+        
         ## Correlation Matrix ####
         tabItem(tabName = "correlationmatrices", 
                 # h1("Correlation Matrix"),
@@ -241,34 +271,7 @@ ui <- fluidPage(
             )
           )
         ), 
-      ## Clustering ####
-      tabItem(tabName = "clustering", 
-          fluidRow(column(12,
-                    box(
-                      div(style = "display:inline-block", actionButton("clusteringselectall", "Select All")), 
-                      div(style = "display:inline-block", actionButton("clusteringselectnone", "Select None")),
-                      div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabelsclustering")), 
-                    title = "Select Variables", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = F)
-                )
-            ),
-          fluidRow(column(12,
-                    box(
-                      selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
-                      numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
-                      radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F),
-                      div(style = "display: inline-block", downloadButton("down_clustering")),
-                      div(style = "display: inline-block", radioButtons("clustering.type", NULL, choices = c("pdf"))),
-                      div(style = "display: block", actionButton("clustering.save", "Save Clustering")),
-                      helpText("Note: Saves clustering to metadata table."),
-                    title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
-                )
-            ),
-          fluidRow(column(12, 
-                    box(plotOutput("exampleclustering"), 
-                        title = "Clustering", width = 12, solidHeader = T, status = "primary")    
-                )
-            )
-        ),
+    
       ## PCA ####
       
       tabItem(tabName = "pca", 
@@ -1255,21 +1258,31 @@ server <- function(input, output, session) {
     
     
     ### Save Metadata Clustering ####
-    observeEvent(input$clustering.save, {
-      data_table <- inputdata()[input$selectionclustering]
-      file <- NULL
-      algorithm <- input$algorithmclustering
-      n_clusters <- input$numclusters
-      color_groups = NULL 
-      animal_label <- input$idclustering
-      meta_data <- metadata()
-      meta_data$clustering = clusteringAnalysis(data_table, file, algorithm, n_clusters,
-                                                color_groups, animal_label, meta_data)
-      req(infile <- input$upload)
-      write.xlsx(meta_data$clustering, infile$datapath, sheetName = "meta_data", rowNames = T, colNames=T, append = T)
-      metadata(meta_data)
-    })
-    
+    # observeEvent(input$clustering.save, {
+    output$clustering.save <- downloadHandler(
+      filename <- function() {
+        new_name <- sub(".xlsx$", "", basename(input$upload$name))
+        return(paste0(new_name, "_clustering_", input$algorithmclustering, "_", input$numclusters, ".xlsx"))
+        },
+      content <- function(file){
+        data_table <- inputdata()[input$selectionclustering]
+        algorithm <- input$algorithmclustering
+        n_clusters <- input$numclusters
+        color_groups = NULL 
+        animal_label <- input$idclustering
+        meta_data <- metadata()
+        meta_data$clustering = clusteringAnalysis(data_table, NULL, algorithm, n_clusters,
+                                                  color_groups, animal_label, meta_data)
+        metadata(meta_data)
+        req(infile <- input$upload)
+        print(file)
+        
+        sheet_names <- list("grand_table" = inputdata()[input$selectionclustering], 
+                            "labels" = labels(), 
+                            "metadata" = metadata())
+        write.xlsx(sheet_names, file, rowNames = T, colNames = T)
+      })
+     
     
     
     ## PCA ####
