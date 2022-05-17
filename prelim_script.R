@@ -629,7 +629,7 @@ pcaAnalysis <- function(data_table, file, grouping = NULL, color_groups = NULL,
       h=4
       w = 5.5
     }
-    
+    print(typeof(file))
     pdf(file, height = h, width= w)
     # p
     print(p)
@@ -782,17 +782,16 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
     w = 5
     
   }
+  pdf(file, height = h, width = w)
+  print(p)
+  dev.off()
   
-  # pdf(file, height = h, width = w)
-  # print(p)
-  # dev.off()
-  
-  # return(clusters)
+  return(clusters)
 }
 
 
 #Add the clustering variable to the meta_data
-meta_data$clustering = clusteringAnalysis(data_table, file, meta_data = meta_data)
+# meta_data$clustering = clusteringAnalysis(data_table, file, meta_data = meta_data)
 
 
 

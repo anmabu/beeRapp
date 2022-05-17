@@ -244,15 +244,22 @@ ui <- fluidPage(
       ## Clustering ####
       tabItem(tabName = "clustering", 
           fluidRow(column(12,
-                    box(uiOutput("selectlabelsclustering"), 
-                        title = "Select Variables", width = 12, solidHeader = T, status = "primary")
+                    box(
+                      div(style = "display:inline-block", actionButton("clusteringselectall", "Select All")), 
+                      div(style = "display:inline-block", actionButton("clusteringselectnone", "Select None")),
+                      div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabelsclustering")), 
+                    title = "Select Variables", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = F)
                 )
             ),
           fluidRow(column(12,
                     box(
                       selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
                       numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
-                      radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F), 
+                      radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F),
+                      div(style = "display: inline-block", downloadButton("down_clustering")),
+                      div(style = "display: inline-block", radioButtons("clustering.type", NULL, choices = c("pdf"))),
+                      div(style = "display: block", actionButton("clustering.save", "Save Clustering")),
+                      helpText("Note: Saves clustering to metadata table."),
                     title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
                 )
             ),
@@ -309,9 +316,11 @@ server <- function(input, output, session) {
     # )
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
-    metadata <- reactive({
-        req(infile <- input$upload)
-        read.xlsx(infile$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_")
+    metadata <- reactiveVal()
+    # this way "metadata" can be updated when clustering took place
+    observeEvent(input$upload, {
+      value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_") 
+      metadata(value)
     })
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
@@ -1072,15 +1081,30 @@ server <- function(input, output, session) {
       }
     )
     ## Clustering ####
+    ### Select Labels Clustering ####
+    output$selectlabelsclustering <- renderUI({
+      checkboxGroupInput("selectionclustering", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames) 
+    })
+    
+    observeEvent(input$clusteringselectall, {
+      updateCheckboxGroupInput(session, "selectionclustering", selected = labels()$colnames)
+    })
+    observeEvent(input$clusteringselectnone, {
+      updateCheckboxGroupInput(session, "selectionclustering", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames)
+    })   
+    
     ### Example Clustering ####
     output$exampleclustering <- renderPlot({
-      data_table <- inputdata()
+      req(inputdata())
+      req(input$selectionclustering)
+      data_table <- inputdata()[input$selectionclustering]
       file <- NULL
       algorithm <- input$algorithmclustering
       n_clusters <- input$numclusters
       color_groups = NULL 
       animal_label <- input$idclustering
       meta_data <- metadata()
+      print(metadata())
       #Convert to a data frame if only one variable is selected
       data_table = data.frame(data_table)
       animal = meta_data$animal
@@ -1208,6 +1232,44 @@ server <- function(input, output, session) {
       }
       return(p)
     })
+    
+    ### Download Clustering ####
+    output$down_clustering <- downloadHandler(
+      filename <- function() {
+        req(input$algorithmclustering)
+        (paste0(input$algorithmclustering, "_", input$numclusters, "_", "cluster.pdf"))
+      }, 
+      content <- function(file){
+        data_table <- inputdata()[input$selectionclustering]
+        # file <- NULL
+        algorithm <- input$algorithmclustering
+        n_clusters <- input$numclusters
+        color_groups = NULL 
+        animal_label <- input$idclustering
+        meta_data <- metadata()
+        
+        clusteringAnalysis(data_table, file, algorithm, n_clusters,
+                           color_groups, animal_label, meta_data)
+      }  
+    )
+    
+    
+    ### Save Metadata Clustering ####
+    observeEvent(input$clustering.save, {
+      data_table <- inputdata()[input$selectionclustering]
+      file <- NULL
+      algorithm <- input$algorithmclustering
+      n_clusters <- input$numclusters
+      color_groups = NULL 
+      animal_label <- input$idclustering
+      meta_data <- metadata()
+      meta_data$clustering = clusteringAnalysis(data_table, file, algorithm, n_clusters,
+                                                color_groups, animal_label, meta_data)
+      req(infile <- input$upload)
+      write.xlsx(meta_data$clustering, infile$datapath, sheetName = "meta_data", rowNames = T, colNames=T, append = T)
+      metadata(meta_data)
+    })
+    
     
     
     ## PCA ####
@@ -1390,5 +1452,4 @@ server <- function(input, output, session) {
     )
 }
 
-# ?parallelly::supportsMulticore
 shinyApp(ui, server)
