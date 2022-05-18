@@ -75,18 +75,29 @@ ui <- fluidPage(
                                 box(
                                   selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
                                   numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
-                                  radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F),
-                                  div(style = "display: inline-block", downloadButton("down_clustering")),
-                                  div(style = "display: inline-block", radioButtons("clustering.type", NULL, choices = c("pdf"))),
                                   div(style = "display: block", downloadButton("clustering.save", "Save Clustering")),
                                   helpText("Note: Saves clustering to metadata table and downloads the updated xlsx file."),
                                   title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
                 )
                 ),
-                fluidRow(column(12, 
-                                box(plotOutput("exampleclustering"), 
+                fluidRow(column(6, 
+                                box(
+                                  div(style = "display: inline-block", downloadButton("down_clustering")),
+                                  div(style = "display: inline-block", radioButtons("clustering.type", NULL, choices = c("pdf"))),
+                                  plotOutput("exampleclustering"), 
                                     title = "Clustering", width = 12, solidHeader = T, status = "primary")    
-                )
+                        ), 
+                        column(4, 
+                               box(
+                                 column(4,
+                                   radioButtons("idclustering", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F)
+                                 ),
+                                 column(6, 
+                                   radioButtons("colorselect.clustering", "Select custom colors", choices = c("Yes" = F, "No" = T), selected = T)
+                                  ),
+                                 title = "Plot Settings", width = 12, solidHeader = T, status = "primary"),
+                        uiOutput("colorpicker.clustering")
+                        ),
                 )
         ),
         
@@ -134,9 +145,6 @@ ui <- fluidPage(
                               choiceValues = c(".pdf", ".pptx", ".zip"))), 
                   title  = "Pairwise Correlations Settings", width = 12, collapsible = F, solidHeader = T, status = "primary"
                 )
-              # verbatimTextOutput("selected_format"),
-              # make options to select/deselect all Values
-              # make options to deselect Values
             )
           ), 
           fluidRow(
@@ -201,14 +209,14 @@ ui <- fluidPage(
             ), 
             column(4, 
               box(
-                column(4, 
-                  uiOutput("colorboxplot")
-                ), 
+                column(4,
+                  radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+                ),
                 column(4,
                   radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F)
                 ),
-                column(4,
-                  radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+                column(4, 
+                  uiOutput("colorboxplot")
                 ), 
                 title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
               ), 
@@ -852,14 +860,14 @@ server <- function(input, output, session) {
     ## Heatmap####
     # Reactives
     cols_cluster <- reactive({
-      if (eval(parse(text = input$dendrogram_cols.button)) | eval(parse(text = input$cluster_cols.button))) {
+      if (as.logical(input$dendrogram_cols.button) | as.logical(input$cluster_cols.button)) {
         updateRadioButtons(session, "cluster_cols.button", selected = T)
         return(T)
       } else {return(F)}
     })
     
     rows_cluster <- reactive({
-      if (eval(parse(text=input$dendrogram_rows.button)) | eval(parse(text=input$cluster_rows.button))) {
+      if (as.logical(input$dendrogram_rows.button) | as.logical(input$cluster_rows.button)) {
         updateRadioButtons(session, "cluster_rows.button", selected = T)
         return (T)
       } else {return(F)}
@@ -952,11 +960,11 @@ server <- function(input, output, session) {
       # req(color_groups.heatmap())
       # req(heat_groups_color())
       data_table <- inputdata()
-      scale <- eval(parse(text = input$scaled.button))
+      scale <- as.logical(input$scaled.button)
       cluster_cols <- cols_cluster()
       cluster_rows <- rows_cluster()
-      dendrogram_cols <- eval(parse(text=input$dendrogram_cols.button))
-      dendrogram_rows <- eval(parse(text=input$dendrogram_rows.button))
+      dendrogram_cols <- as.logical(input$dendrogram_cols.button)
+      dendrogram_rows <- as.logical(input$dendrogram_rows.button)
       grouping <- NULL
       color_groups <- NULL
       subset <- input$selectionheatmap
@@ -1096,6 +1104,35 @@ server <- function(input, output, session) {
       updateCheckboxGroupInput(session, "selectionclustering", choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames)
     })   
     
+    ### Color Clustering ####
+    output$colorpicker.clustering <- renderUI({
+      box(
+        if (input$numclusters > 0){
+          lapply(1:input$numclusters, function(x){
+            column_width <- as.integer(12 / input$numclusters)
+            column(column_width,
+              radioButtons(paste0("group_color_clustering.", x), paste0("Select color ", x), choices = color_values))})
+        },
+        title = "Choose Colors", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = as.logical(input$colorselect.clustering)
+      )
+    })
+    
+    # outputs the colors for the groups in a list
+    clustering_groups_color <- reactive({
+      if (input$numclusters == 1){
+        cbbPalette <- c(input[[paste0('group_color_clustering.1')]])
+        return(cbbPalette)
+      } else 
+        if (input$numclusters > 1){ 
+          empty_list <- c()
+          new_list <- lapply(1:input$numclusters, function(x){
+            input_value <- input[[paste0('group_color_clustering.', x)]]  # use this input type for dynamic input
+            empty_list <- c(empty_list, input_value)
+          })
+          return(new_list)
+        }
+    })
+    
     ### Example Clustering ####
     output$exampleclustering <- renderPlot({
       req(inputdata())
@@ -1104,10 +1141,13 @@ server <- function(input, output, session) {
       file <- NULL
       algorithm <- input$algorithmclustering
       n_clusters <- input$numclusters
-      color_groups = NULL 
+      color_groups <- NULL 
       animal_label <- input$idclustering
       meta_data <- metadata()
-      print(metadata())
+      
+      if (!as.logical(input$colorselect.clustering)) {
+        color_groups <- unlist(clustering_groups_color())
+      }
       #Convert to a data frame if only one variable is selected
       data_table = data.frame(data_table)
       animal = meta_data$animal
@@ -1244,12 +1284,15 @@ server <- function(input, output, session) {
       }, 
       content <- function(file){
         data_table <- inputdata()[input$selectionclustering]
-        # file <- NULL
         algorithm <- input$algorithmclustering
         n_clusters <- input$numclusters
         color_groups = NULL 
         animal_label <- input$idclustering
         meta_data <- metadata()
+        
+        if (!as.logical(input$colorselect.clustering)) {
+          color_groups <- unlist(clustering_groups_color())
+        }
         
         clusteringAnalysis(data_table, file, algorithm, n_clusters,
                            color_groups, animal_label, meta_data)
