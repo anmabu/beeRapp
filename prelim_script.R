@@ -1,4 +1,4 @@
-#BEHAVIORAL ANALYSIS
+#BEHAVIORAL ANALYSIS ####
 library(ggplot2)
 library(ggpubr)
 library(Hmisc)
@@ -19,33 +19,6 @@ library(PMCMRplus)
 library(ggrepel)
 library(officer)
 
-###########################################################################
-#                              IMPORT DATA
-#--------------------------------------------------------------------------
-#Either set directory to the folder containing the files or write the full directory to the files
-#setwd("/Directory/To/Files)
-
-
-data_table  <- read.xlsx("grand_table.xlsx", colNames = T, sheet =  "grand_table", rowNames = T)
-labels <- read.xlsx("grand_table.xlsx", colNames = T, sheet =  "labels")
-meta_data <- read.xlsx("grand_table.xlsx", colNames = T, sheet =  "meta_data") 
-
-#################################################################################################################
-#SANITY CHECKS ####
-
-#1. The data_table contains the animal id as row names. Check if they are in the same order as in the meta_data table
-
-vec <- rownames(data_table) == meta_data$animal 
-#The following command should return true
-all(vec) == TRUE
-
-#2. The lables table contains the description of the behavioural variables (columns in the data_table). Check if the colnames are 
-#All present in the labels table
-
-vec <- colnames(data_table) == labels$colnames
-
-#The following command should return true
-all(vec) == TRUE
 
 # Correlation Matrix all Variables ####
 #Function to calculate a correlation matrix for the behavioural data matrix
@@ -269,15 +242,8 @@ pairwiseCorrelations.example <- function(data_table, labels, format = ".pdf",
         }else{
           lab1 = paste0("r=",  r, ", p=" ,round(p.val,3))
         }
-        #if(id == "yes"){
-        #  lab2 = paste(rownames(data_table))[i]
-        # writeLines(lab2)
-        #  p = p+ ggplot2::annotate(geom = "text", x = xcoord, y = 1.2*ymax,
-        #                           label=paste0(lab1,", id=", lab2), fontface=3, size=4.5)
-        # } else {
         p = p+ ggplot2::annotate(geom = "text", x = xcoord, y = 1.2*ymax,
                                  label=lab1, fontface=3, size=4.5)
-        # }
         
         p = p + geom_point()
         

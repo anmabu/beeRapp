@@ -7,24 +7,15 @@ suppressPackageStartupMessages({
   library(gridExtra)
   library(officer)
   library(openxlsx)
-  # library(patchwork)
   library(shiny)
   library(shinydashboard)
-  # library(uuid)
-  library(promises)
-  library(future)
   library(sets)
 })
-# install.packages("future", dependencies = T)
-# if(interactive()){
-plan(multisession)
 # Global Variables ####
 color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
 
 # UI ####
 ui <- fluidPage(
-    # theme = bslib::bs_theme(bootswatch = "flatly"),
-    # titlePanel("First Version"),
   dashboardPage(
     dashboardHeader(title = "behavioranalyzeR"), 
     dashboardSidebar(
@@ -100,18 +91,129 @@ ui <- fluidPage(
                         ),
                 )
         ),
+        ## Boxplots ####
+        tabItem(tabName = "boxplots", 
+                fluidRow(
+                  column(12,
+                         box(
+                           selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test"), width = "400px"),
+                           numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
+                           downloadButton("downboxplots", "Download"),
+                           div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
+                                                                           choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperatly as .pdf)"), 
+                                                                           choiceValues = c("pdf", "pptx", "zip"))), 
+                           title = "Boxplots Settings", width = 12, solidHeader = T, collapsible = F, status = "primary" 
+                         )
+                  )
+                ), 
+                fluidRow(
+                  column(6,
+                         box(
+                           plotOutput("boxplotexample", height = 600, width = 450), 
+                           title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
+                         )
+                  ), 
+                  column(4, 
+                         box(
+                           column(4,
+                                  radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
+                           ),
+                           column(4,
+                                  radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F)
+                           ),
+                           column(4, 
+                                  uiOutput("colorboxplot")
+                           ), 
+                           title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
+                         ), 
+                         box(
+                           column(6, 
+                                  radioButtons("boxcolor.one", "Choose First Color", choices = color_values, selected = "#D55E00")), 
+                           column(6, 
+                                  radioButtons("boxcolor.two", "Choose Second Color", choices = color_values, selected = "#5D3A9B")),
+                           column(12, 
+                                  textInput("choose_add_boxcolor", "Add Custom Color", placeholder = "Color in Hex Code"), 
+                                  actionButton("add_boxcolor.button", "Add Color to Palette")),
+                           title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
+                         )
+                  ) 
+                )
+        ), 
+        ## Heatmap ####
+        tabItem(tabName = "heatmap", 
+                fluidRow(column(12, 
+                                box(
+                                  div(style = "display:inline-block", actionButton("heatmapselectall", "Select All")), 
+                                  div(style = "display:inline-block", actionButton("heatmapselectnone", "Select None")),
+                                  div(style = "height:300px;overflow-y: scroll;width:100%",uiOutput("selectlabelsheatmap")),
+                                  title = "Select Variables", width = 12, solidHeader = T, collapsible = T, status = "primary")
+                )
+                ), 
+                fluidRow(
+                  column(12,
+                         box(
+                           selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
+                                                                                           "Teal", "Sunset", "Viridis"), selected = "RdBu", width = "400px"),
+                           column(2, radioButtons("cluster_cols.button", "Clustering of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                           column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                           column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                           column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
+                           column(2, radioButtons("scaled.button", "Scale Values?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
+                           column(2, radioButtons("grouping.button", "Grouping?", choices = c("Yes" = T, "No" = F), selected = F)),
+                           fluidRow(
+                             column(12, 
+                                    div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
+                                    div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))))
+                           ),
+                           title = "Heatmap Settings", width = 12, solidHeader = T, status = "primary"      
+                         )
+                  )
+                ), 
+                fluidRow(
+                  column(12, 
+                         uiOutput("groups_heatmap")
+                  )
+                ),
+                
+                fluidRow(
+                  column(12, 
+                         box(
+                           plotOutput("exampleheatmap", height = 600, width = 1000), 
+                           title = "Example Heatmap", width = 12, solidHeader = T, status = "primary", align = "center"
+                         )
+                  )
+                )
+        ), 
+        ## PCA ####
         
+        tabItem(tabName = "pca", 
+                fluidRow(column(12,
+                                box(
+                                  column(2, radioButtons("pca_animal_id", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F)),
+                                  column(2, uiOutput("colorgroups_pca")),
+                                  column(8, uiOutput("pca_color_picker")),
+                                  column(12, 
+                                         div(style = "display:inline-block", downloadButton("down_pca")),
+                                         div(style = "display:inline-block", radioButtons("pca_down.type", NULL, choices = c(".pdf"))),
+                                         style = "margin-left: -15px"),
+                                  title = "PCA Settings", width = 12, solidHeader = T, status = "primary"
+                                )
+                         )
+                ),
+                fluidRow(column(12, 
+                                box(plotOutput("examplepca"), 
+                                    title = "PCA", width = 12, solidHeader = T, status = "primary")
+                         )
+                )
+        ),
         ## Correlation Matrix ####
         tabItem(tabName = "correlationmatrices", 
-                # h1("Correlation Matrix"),
           fluidRow(
             column(12, 
                 box(
                   div(style = "display:inline-block", actionButton("corrselectall", "Select All")), 
                   div(style = "display:inline-block", actionButton("corrselectnone", "Select None")),
                   div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabels")), 
-                  # div(style = "height:300px;overflow-y: scroll; width:100%", checkboxGroupInput("selection", NULL, choiceNames = paste(labels()$label1, labels()$label2), choiceValues=labels()$colnames, selected=labels()$colnames)), 
-                  
                   title = "Select Variables", width = 12, collapsible = T, 
                       solidHeader = T, status = "primary"
                 )
@@ -120,8 +222,6 @@ ui <- fluidPage(
           fluidRow(
             column(12, 
               box(
-                 # h4("Correlation Matrix"), 
-                 # div(style = "display:inline-block", actionButton("plot_selected_script", "Plot")), 
                  div(style = "display:inline-block", downloadButton("downloadcorr", "Download")),
                  div(style= "display:inline-block", radioButtons("dfcorrmatrix", "", c(".pdf"))),
                  plotOutput("cormat", height=800), 
@@ -136,7 +236,6 @@ ui <- fluidPage(
           fluidRow(
             column(12, 
                 box(
-              # h4("Pairwise Correlations"),
                   selectInput("corrtype", "Select Correlation Type", choices = c("pearson", "spearman", "kendall"), width = "400px"),# , "spearman", "kendall")),
                   numericInput("thresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width="400px"),
                   downloadButton("downpaircorr", "Download"),
@@ -151,7 +250,6 @@ ui <- fluidPage(
             column(6,
                 box(
                   plotOutput("paircorrexample", width=500, height = 400), 
-              # change colors of plot
                   title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
                 ), 
               ),
@@ -166,142 +264,10 @@ ui <- fluidPage(
            
               title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
               ), 
-              # box(
-              #   column(12, 
               uiOutput("pair_color_picker"),
-              # title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary" 
-              # ),
-            
-              # box(
-              #  column(6, 
-              #         radioButtons("paircolor.one", "Choose First Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#D55E00")), 
-              #  column(6, 
-              #         radioButtons("paircolor.two", "Choose Second Color", choices = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B"), selected = "#5D3A9B")),
-              #  title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
-              # )
-              # make column to select colors of plot
             )
           )
-        ), 
-        ## Boxplots ####
-        tabItem(tabName = "boxplots", 
-          fluidRow(
-            column(12,
-              box(
-                # h4("Boxplots"), 
-                selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test"), width = "400px"),
-                numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
-                downloadButton("downboxplots", "Download"),
-                div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
-                                                                choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperatly as .pdf)"), 
-                                                                choiceValues = c("pdf", "pptx", "zip"))), 
-              title = "Boxplots Settings", width = 12, solidHeader = T, collapsible = F, status = "primary" 
-              )
-            )
-          ), 
-          fluidRow(
-            column(6,
-              box(
-              # h4("Example Plot"), 
-                plotOutput("boxplotexample", height = 600, width = 450), 
-                title = "Example Plot", width = 12, collapsible = F, solidHeader = T, status = "primary", align = "center"
-              )
-            ), 
-            column(4, 
-              box(
-                column(4,
-                  radioButtons("boxID", "Animal ID", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)
-                ),
-                column(4,
-                  radioButtons("removeoutliers", "Remove Outliers?", choiceNames = c("yes", "no"), choiceValues = c(TRUE, FALSE), selected = F)
-                ),
-                column(4, 
-                  uiOutput("colorboxplot")
-                ), 
-                title = "Plot Settings", width = 12, solidHeader = T, collapsible = F, status = "primary", align = "left"
-              ), 
-              box(
-                column(6, 
-                  radioButtons("boxcolor.one", "Choose First Color", choices = color_values, selected = "#D55E00")), 
-                column(6, 
-                  radioButtons("boxcolor.two", "Choose Second Color", choices = color_values, selected = "#5D3A9B")),
-                column(12, 
-                  textInput("choose_add_boxcolor", "Add Custom Color", placeholder = "Color in Hex Code"), 
-                  actionButton("add_boxcolor.button", "Add Color to Palette")),
-                title = "Choose Colors", width = 12, solidHeader = T, collapsible = T, status = "primary"               
-              )
-            ) 
-          )
-        ), 
-        ## Heatmap ####
-        tabItem(tabName = "heatmap", 
-          fluidRow(column(12, 
-              box(
-                div(style = "display:inline-block", actionButton("heatmapselectall", "Select All")), 
-                div(style = "display:inline-block", actionButton("heatmapselectnone", "Select None")),
-                div(style = "height:300px;overflow-y: scroll;width:100%",uiOutput("selectlabelsheatmap")),
-              title = "Select Variables", width = 12, solidHeader = T, collapsible = T, status = "primary")
-            )
-          ), 
-          fluidRow(
-            column(12,
-                box(
-              # h4("Heatmap"), 
-                  selectInput("heatmapcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "Blue-Yellow",
-                                                                             "Teal", "Sunset", "Viridis"), selected = "RdBu", width = "400px"),
-                  column(2, radioButtons("cluster_cols.button", "Clustering of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("cluster_rows.button", "Clustering of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("dendrogram_cols.button", "Dendrogram of Columns?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("dendrogram_rows.button", "Dendrogram of Rows?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = F)),
-                  column(2, radioButtons("scaled.button", "Scale Values?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
-                  column(2, radioButtons("grouping.button", "Grouping?", choices = c("Yes" = T, "No" = F), selected = F)),
-                  fluidRow(
-                    column(12, 
-                           div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
-                           div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))))
-                  ),
-                  title = "Heatmap Settings", width = 12, solidHeader = T, status = "primary"      
-              )
-            )
-          ), 
-          fluidRow(
-            column(12, 
-                uiOutput("groups_heatmap")
-                   )
-          ),
-          
-          fluidRow(
-            column(12, 
-              box(
-                plotOutput("exampleheatmap", height = 600, width = 1000), 
-                title = "Example Heatmap", width = 12, solidHeader = T, status = "primary", align = "center"
-              )
-            )
-          )
-        ), 
-    
-      ## PCA ####
-      
-      tabItem(tabName = "pca", 
-          fluidRow(column(12,
-                    box(
-                      column(2, radioButtons("pca_animal_id", "Animal ID", choices = c("Yes" = T, "No" = F), selected = F)),
-                      column(2, uiOutput("colorgroups_pca")),
-                      column(8, uiOutput("pca_color_picker")),
-                      column(12, 
-                             div(style = "display:inline-block", downloadButton("down_pca")),
-                             div(style = "display:inline-block", radioButtons("pca_down.type", NULL, choices = c(".pdf"))),
-                      style = "margin-left: -15px"),
-                      title = "PCA Settings", width = 12, solidHeader = T, status = "primary"
-                    )
-                )
-          ),
-          fluidRow(column(12, 
-                     box(plotOutput("examplepca"), 
-                         title = "PCA", width = 12, solidHeader = T, status = "primary")
-                     )
-          )
-        )
+        ) 
       )
     )
   )
@@ -314,22 +280,14 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     source("prelim_script.R")
   
-    # validate order of labels and meta_data
-    # substitute " " in col names with "_"
+    
   
-    # observeEvent(input$upload, validate(
-      # need({
-        # infile <- input$upload
-        # cat(infile$datapath)
-        # infile$datapath != ""
-      # }, "select another file")
-    # )
-    # )
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
     metadata <- reactiveVal()
     # this way "metadata" can be updated when clustering took place
     observeEvent(input$upload, {
+      # substitute " " in col names with "_"
       value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_") 
       metadata(value)
     })
@@ -342,9 +300,9 @@ server <- function(input, output, session) {
     inputdata <- reactive({
         req(infile <- input$upload)
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
-        # cat(colnames(dat))
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        # validate order of labels and meta_data
         #SANITY CHECKS
         
         #1. The meta_data table should contain all animal id's as in the data_table. If not the case, an error message should be produced
@@ -390,7 +348,6 @@ server <- function(input, output, session) {
           #Produce error message "Not all animals IDs are present in the meta data table"
         }
         
-        
         #4. Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
         #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
         
@@ -418,18 +375,14 @@ server <- function(input, output, session) {
             ))
           }
         }
-        # cat(unlist(meta_data))
         # returns the data if all tests are passed
         return(dat)
     })
     
-    
-    # This is not used rn, but displays selected Labels
-    # output$selected_format <- renderPrint(input$dfcorrmatrix)    
     # Display Data when loaded correctly
     output$datatable <- renderDataTable({
       datatable(
-        inputdata()[, 1:ncol(inputdata())], # rownames = T, colnames = T
+        inputdata()[, 1:ncol(inputdata())],
         extensions = c('Scroller'),
         options = list(scrollY = 400,
                        deferRender = TRUE,
@@ -503,12 +456,8 @@ server <- function(input, output, session) {
       for (i in 1:length_pair_color()){
         updateRadioButtons(session, paste0("pair_color.", i), choices = updatedValues)
       }
-      # updateRadioButtons(session, "boxcolor.one", choices = updatedValues)
-      # updateRadioButtons(session, "boxcolor.two", choices = updatedValues)
     })
     paircolor <- reactive({
-      # cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-      # colors <- list("blue", "red", "green")
       cbbPalette <- c()
       req(length_pair_color())
       req(input$select_colorgroups)
@@ -517,7 +466,6 @@ server <- function(input, output, session) {
         return(cbbPalette)
       } 
       if (length_pair_color() > 1){ 
-        # for (i in 1:length_pair_color()){
         new_list <- lapply(1:length_pair_color(), function(x){
           input_value <- input[[paste0('pair_color.', x)]]  # use this input type for dynamic input
           # the following variable name of cbbPalette is a bit weird but it works
@@ -565,7 +513,6 @@ server <- function(input, output, session) {
     ### Download Pairwise Correlation #### 
     output$downpaircorr <- downloadHandler( 
       filename <- function () {
-        # add correlation type to file name?
         if (input$dfpairmatrix == ".pptx"){
           name <- "pair_corr_plots.pptx" 
           return(name)
@@ -584,20 +531,11 @@ server <- function(input, output, session) {
         labels <- labels()
         type <- input$corrtype
         threshold <- input$thresholdvalue
-        # id <- input$mouseID
-        # cat(unlist(paircolor()))
         grouping <- pairgroups()
         color_groups <- unlist(paircolor())
         subset <- NULL
         animal_label <- input$pairID
-        # https://rstudio.github.io/promises/articles/casestudy.html
-        # future_promise({
-        # pairwiseCorrelations(file, data_table, labels, format, type, threshold)
-        # }) %...>%
-         # outputfiles()
         pairwiseCorrelations(file, data_table, labels, format, type, threshold, grouping = grouping, color_groups = color_groups, animal_label = animal_label)
-        # fileoutput <- callr::r_bg(func = rundownpaircorr, args=list(file, format, data_table, labels, type, threshold), supervise = TRUE)
-        # fileoutput
         }
        )
         fileoutput()
@@ -718,8 +656,6 @@ server <- function(input, output, session) {
     
     output$heatmap_color_picker <- renderUI({
       req(length_heatmap_color())
-      # print(length_heatmap_color())
-      # column_width = as.integer(12 / length_pair_color())
       fluidRow(column(12, h5("Select Colors")))
       if (length_heatmap_color() > 0){
           lapply(1:length_heatmap_color(), function(x){
@@ -735,11 +671,6 @@ server <- function(input, output, session) {
         column(10, uiOutput("heatmap_color_picker")),
         title = "Heatmap Grouping Settings", collapsible = T, status = "primary", solidHeader = T, collapsed = coll, width = 12
       )}
-    
-    # observeEvent(input$select_colorgroups.heatmap, {
-    #   print(heat_groups_color())
-      # print(color_groups.heatmap())
-    # })
     
     # renders box above
     output$groups_heatmap <- renderUI({
@@ -804,7 +735,7 @@ server <- function(input, output, session) {
       subset <- input$selectionheatmap
       palette <- input$heatmapcolor
       # for some reason the function is called twice and during the first round not all colors are picked, resulting in a warning
-      if (req(input$grouping.button)){
+      if (as.logical(input$grouping.button)){
         grouping <- color_groups.heatmap()
         color_groups <- unlist(heat_groups_color())
       }
@@ -856,6 +787,8 @@ server <- function(input, output, session) {
             column(column_width,
               radioButtons(paste0("group_color_clustering.", x), paste0("Select color ", x), choices = color_values))})
         },
+        textInput("choose_add_clustercolor", "Add Custom Color", placeholder = "Color in Hex Code"), 
+        actionButton("add_clustercolor.button", "Add Color to Palette"),
         title = "Choose Colors", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = as.logical(input$colorselect.clustering)
       )
     })
@@ -874,6 +807,16 @@ server <- function(input, output, session) {
           })
           return(new_list)
         }
+    })
+    
+    observeEvent(input$add_clustercolor.button, {
+      req(input$choose_add_clustercolor)
+      newVal <- input$choose_add_clustercolor
+      updatedValues <- c(color_values, newVal)
+      color_values <<- updatedValues  #super-assign operator
+      for (i in 1:input$numclusters){
+        updateRadioButtons(session, paste0("group_color_clustering.", i), choices = updatedValues)
+      }
     })
     
     ### Example Clustering ####
@@ -921,7 +864,6 @@ server <- function(input, output, session) {
     
     
     ### Save Metadata Clustering ####
-    # observeEvent(input$clustering.save, {
     output$clustering.save <- downloadHandler(
       filename <- function() {
         new_name <- sub(".xlsx$", "", basename(input$upload$name))
@@ -938,7 +880,6 @@ server <- function(input, output, session) {
                                                   color_groups, animal_label, meta_data))
         metadata(meta_data)
         req(infile <- input$upload)
-        print(file)
         
         sheet_names <- list("grand_table" = inputdata()[input$selectionclustering], 
                             "labels" = labels(), 
