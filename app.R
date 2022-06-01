@@ -17,7 +17,7 @@ color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B
 # UI ####
 ui <- fluidPage(
   dashboardPage(
-    dashboardHeader(title = "behavioranalyzeR"), 
+    dashboardHeader(title = "beeRapp"), 
     dashboardSidebar(
       sidebarMenu(
         menuItem("Welcome", tabName = "welcome", icon = icon("compass", lib = "font-awesome")),
@@ -39,8 +39,28 @@ ui <- fluidPage(
                 fluidRow(
                   column(12, 
                          # box(
-                           h3("Welcome to behavioranalyzeR!")
-                         #   title = "", solidHeader = T, status = "primary", collapsible = F, width = 12
+                         h2("Welcome to beeRapp!"), 
+                         h3("What is beeRapp?"),
+                         p("Explain the acronym here. 
+                            With beeRapp fundamental analysis techniques become easily applicable to your own data. 
+                            These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
+                            All results can be saved in pdf files."),
+                         p("beeRapp is written in R. Visit us at", a('GitHub', href='https://github.com/anmabu/beeRapp'), "to see how to contribute."),
+                         # br(),
+                         h3("How to use beeRapp?"), 
+                         p("To use beeRapp your data must be stored in an .xslx file with the three following tabs:"), 
+                         p("- ", strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
+                           The following columns contain the obtained values with the column names being specified further in the ", strong("labels"), " tab."),
+                         p("- ", strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
+                           With 'colnames' being the colnames from ", strong("grand_table"), " which are abbreviations, the labels 1 and 2 the fully written names 
+                           of the columns used in data processing and plot representation."),
+                         p("- ", strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
+                         # br(),
+                         p("With the .xlsx file setup as described above, you are ready to go!
+                           Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'."),
+                         # p("Feel free to test the process using the example.xlsx file before using your own data. ")
+                          
+                          # title = "Welcome to beeRapp!", solidHeader = T, status = "primary", collapsible = F, width = 12
                          # ))
                 ))),
         ## Import Data ####
@@ -280,8 +300,6 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     source("prelim_script.R")
   
-    
-  
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
     metadata <- reactiveVal()
@@ -323,11 +341,11 @@ server <- function(input, output, session) {
         vec <- rownames(dat) == meta_data$animal 
         
         
-        if(all(vec) == FALSE  & nrow(data_table) == nrow(meta_data) & all(meta_data$animal %in% rownames(data_table))){
-          meta_data = meta_data[base::match(rownames(data_table), meta_data$animal),]
+        if(all(vec) == FALSE  & nrow(dat) == nrow(meta_data) & all(meta_data$animal %in% rownames(dat))){
+          meta_data = meta_data[base::match(rownames(dat), meta_data$animal),]
         }
         
-        if(all(vec) == FALSE & (nrow(data_table) != nrow(meta_data) | !all(meta_data$animal %in% rownames(data_table)))){
+        if(all(vec) == FALSE & (nrow(dat) != nrow(meta_data) | !all(meta_data$animal %in% rownames(dat)))){
           #Produce an error message: "Please make sure that the animal IDs match in the data and meta data tables")
           showModal(modalDialog(
             title = "Input Error", 
@@ -353,10 +371,10 @@ server <- function(input, output, session) {
         
         vec <- colnames(dat) == labels$colnames
         
-        if(all(vec) == FALSE & ncol(data_table) == nrow(labels) & all(labels$colnames %in% colnames(data_table))){
-          labels = labels[base::match(colnames(data_table), labels$colnames),]
+        if(all(vec) == FALSE & ncol(dat) == nrow(labels) & all(labels$colnames %in% colnames(dat))){
+          labels = labels[base::match(colnames(dat), labels$colnames),]
         }
-        if(all(vec) == FALSE & (ncol(data_table) != nrow(labels) | !all(labels$colnames %in% colnames(data_table)))){
+        if(all(vec) == FALSE & (ncol(dat) != nrow(labels) | !all(labels$colnames %in% colnames(dat)))){
           #Produce an error message: "Please make sure that the column names in the data table match the labels in the labels table")
           showModal(modalDialog(
             title = "Input Error", 
@@ -583,7 +601,7 @@ server <- function(input, output, session) {
       possible_choices <- c()
       for (col in data_choices){
         group <- metadata()[, c(col)]
-        max_group <- max(as.numeric(factor(group)))
+        max_group <- max(as.numeric(factor(group)))  # converts grouping var into number
         if (max_group == 2){
           possible_choices <- c(possible_choices, col)
         }
