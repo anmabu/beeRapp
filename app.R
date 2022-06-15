@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
 })
 # Global Variables ####
 color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
-
+# renv::init("/mnt/sda2/Dokumente/Bioinformatik/6.Semester/Behavior_GUI/Shiny_Behavior_GUI/", bioconductor = T)
 # UI ####
 ui <- fluidPage(
   dashboardPage(
@@ -49,12 +49,12 @@ ui <- fluidPage(
                          # br(),
                          h3("How to use beeRapp?"), 
                          p("To use beeRapp your data must be stored in an .xslx file with the three following tabs:"), 
-                         p("- ", strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
+                         p(strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
                            The following columns contain the obtained values with the column names being specified further in the ", strong("labels"), " tab."),
-                         p("- ", strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
+                         p(strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
                            With 'colnames' being the colnames from ", strong("grand_table"), " which are abbreviations, the labels 1 and 2 the fully written names 
                            of the columns used in data processing and plot representation."),
-                         p("- ", strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
+                         p(strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
                          # br(),
                          p("With the .xlsx file setup as described above, you are ready to go!
                            Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'."),
@@ -261,7 +261,7 @@ ui <- fluidPage(
                   downloadButton("downpaircorr", "Download"),
                   div(style= "display:inline-block", radioButtons("dfpairmatrix", "", inline = TRUE, 
                               choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperately as .pdf)"), 
-                              choiceValues = c(".pdf", ".pptx", ".zip"))), 
+                              choiceValues = c("pdf", "pptx", "zip"))), 
                   title  = "Pairwise Correlations Settings", width = 12, collapsible = F, solidHeader = T, status = "primary"
                 )
             )
@@ -298,7 +298,7 @@ ui <- fluidPage(
         
 # Server ####
 server <- function(input, output, session) {
-    source("prelim_script.R")
+    source("src/prelim_script.R")
   
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'
@@ -531,19 +531,9 @@ server <- function(input, output, session) {
     ### Download Pairwise Correlation #### 
     output$downpaircorr <- downloadHandler( 
       filename <- function () {
-        if (input$dfpairmatrix == ".pptx"){
-          name <- "pair_corr_plots.pptx" 
-          return(name)
-        } else if (input$dfpairmatrix == ".pdf"){
-          name <- "pair_corr_plots.pdf"
-          return(name)
-        } else if(input$dfpairmatrix == ".zip"){
-          name <- "pair_corr_plots.zip"
-          return(name)
-        } 
+        return(paste0("pair_corr_plots.", input$dfpairmatrix))
       },
       content <- function(file) { 
-        fileoutput <- reactive({ 
         format <- input$dfpairmatrix
         data_table <- inputdata()
         labels <- labels()
@@ -554,9 +544,6 @@ server <- function(input, output, session) {
         subset <- NULL
         animal_label <- input$pairID
         pairwiseCorrelations(file, data_table, labels, format, type, threshold, grouping = grouping, color_groups = color_groups, animal_label = animal_label)
-        }
-       )
-        fileoutput()
       }
     )
     
@@ -580,8 +567,11 @@ server <- function(input, output, session) {
     ### Reactives Boxplots ####
     boxtesttype <- reactive({
       comp <- req(input$comptype)
-      if (comp == "wilcoxon"){ comp = "wilcox"
-      } else { comp = "t.test"}
+      if (comp == "wilcoxon"){ 
+        comp = "wilcox"
+      } else { 
+        comp = "t.test"
+      }
       return(comp)
     })
     
@@ -624,16 +614,7 @@ server <- function(input, output, session) {
     ### Download Boxplots ####
     output$downboxplots <- downloadHandler(
       filename <- function() {
-        if (input$downboxformat == "pptx"){
-          name <- "boxplots.pptx" 
-          return(name)
-        } else if (input$downboxformat == "pdf"){
-          name <- "boxplots.pdf"
-          return(name)
-        } else if (input$downboxformat == "zip"){
-          name <- "boxplots.zip"
-          return(name)
-        }
+        return(paste0("boxplots.", input$downboxformat))
       },
       content <- function(file){
         data_table <- inputdata()
