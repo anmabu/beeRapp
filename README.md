@@ -1,6 +1,6 @@
 # beeRapp
 ## Welcome to beeRapp! 
-###What is beeRapp
+### What is beeRapp
 Explain the acronym here. 
 With beeRapp fundamental analysis techniques become easily applicable to your own data. 
 These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
