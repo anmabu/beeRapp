@@ -20,3 +20,26 @@ of the columns used in data processing and plot representation.
                          
 With the .xlsx file setup as described above, you are ready to go! Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'.
 
+### Setup
+
+Install R version 4.1.3 and download the files in this repository. 
+
+Start R in your terminal and run
+
+`
+	install.packages("renv")
+`
+
+Open the beeRapp folder in your terminal and execute the following command to install and load all required packages:
+
+`
+	renv::restore()
+`
+
+If RStudio is installed, open app.R with it and start the app using the 'Run App' Button. 
+beeRapp can also be started from the terminal by running  
+
+`
+	Rscript app.R
+`
+and opening the link in the browser of your choice. 
