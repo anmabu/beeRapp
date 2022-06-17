@@ -302,7 +302,7 @@ ui <- fluidPage(
         
 # Server ####
 server <- function(input, output, session) {
-    source("src/prelim_script.R")
+    source("src/script.R")
   
     ## Global Reactives ####
     # loads metadata corresponding to 'grand_table'

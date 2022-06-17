@@ -1,14 +1,22 @@
+# source of this script:
+#    Title: Shiny-Phyloseq
+#    Author: joey711
+#    Date: 17. June 2022
+#    Availability: https://github.com/joey711/shiny-phyloseq
+
+# modified to fit the R version and packages used in beeRapp
+
 ################################################################################
 # Check that the currently-installed version of R
-# is at least the minimum required version.
+# is the correct version
 ################################################################################
-R_min_version = "4.1.3"
-R_version = paste0(R.Version()$major, ".", R.Version()$minor)
-if(compareVersion(R_version, R_min_version) != 0){
-  stop("You do not have the right version of R installed.\n", 
-       "Launch should fail.\n",
-       "Go to http://cran.r-project.org/ and install version 4.1.3 of R.")
-}
+# R_min_version = "4.1.3"
+# R_version = paste0(R.Version()$major, ".", R.Version()$minor)
+# if(compareVersion(R_version, R_min_version) != 0){
+#   stop("You do not have the correct version of R installed.\n", 
+#        "Launch should fail.\n",
+#        "Go to http://cran.r-project.org/ and install version 4.1.3 of R.")
+# }
 install.packages("BiocManager")
 # install specific version of BiocManager! 
 BiocManager::install(version = "3.14") 
@@ -62,14 +70,7 @@ deppkgs = c(corrplot = "0.92",
             ggpubr = "0.4.0", 
             pheatmap = "1.0.12",
             mclust = "5.4.10", 
-            mice = "3.14.0", 
-            nlme = "3.1-555", 
-            emmeans = "1.7.4-1", 
-            car = "3.0-13", 
-            gam = "1.20.1", 
             mixOmics = "6.18.1", 
-            clustvarsel = "2.3.4", 
-            PMCMRplus = "1.9.4", 
             ggrepel = "0.9.1"
             )
 # Loop on package check, install, update
