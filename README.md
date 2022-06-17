@@ -1,8 +1,7 @@
 # beeRapp
 ## Welcome to beeRapp! 
 ### What is beeRapp
-Explain the acronym here. 
-With beeRapp fundamental analysis techniques become easily applicable to your own data. 
+With the BEhavioral Explorative analysis R shiny APP (beeRapp) fundamental analysis techniques become easily applicable to your own data. 
 These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
 All results can be saved in pdf files
 
@@ -22,12 +21,24 @@ With the .xlsx file setup as described above, you are ready to go! Select 'Impor
 
 ### Setup
 
+#### The easy way
+Install R version 4.1.3. 
+
+Start R in your terminal and run
+
+```
+	install.packages("shiny")
+	shiny::runGitHub("beeRapp", "anmabu")
+```
+
+
+#### The hard way
 Install R version 4.1.3 and download the files in this repository. 
 
 Start R in your terminal and run
 
 `
-	install.packages("renv")
+install.packages("renv")
 `
 
 Open the beeRapp folder in your terminal and execute the following command to install and load all required packages:
