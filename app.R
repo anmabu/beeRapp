@@ -1,3 +1,5 @@
+source(install.R, local = T)
+
 suppressPackageStartupMessages({
   library(corrplot)
   library(DT)
@@ -11,6 +13,8 @@ suppressPackageStartupMessages({
   library(shinydashboard)
   # library(sets)
 })
+
+
 # Global Variables ####
 color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
 # renv::init("/mnt/sda2/Dokumente/Bioinformatik/6.Semester/Behavior_GUI/Shiny_Behavior_GUI/", bioconductor = T)
