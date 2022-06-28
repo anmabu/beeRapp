@@ -311,12 +311,19 @@ server <- function(input, output, session) {
     observeEvent(input$upload, {
       # substitute " " in col names with "_"
       value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_") 
+     
       metadata(value)
     })
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
         req(infile <- input$upload)
-        read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        value <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        # value["colnames"] <- gsub(" ", "_", value["colnames"])
+        for (i in 1:nrow(value)){ # substitute whitespace in colnames to match colnames in grand_table
+          value[i, "colnames"] <- gsub(" ", "_", value[i, "colnames"])
+          # print(labels[i, "colnames"])
+        }
+        return(value)
     })
     # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
@@ -324,6 +331,10 @@ server <- function(input, output, session) {
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        for (i in 1:nrow(labels)){ # substitute whitespace in colnames to match colnames in grand_table
+          labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"])
+          # print(labels[i, "colnames"])
+        }
         # validate order of labels and meta_data
         #SANITY CHECKS
         
