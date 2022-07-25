@@ -45,9 +45,8 @@ ui <- fluidPage(
                          # box(
                          h2("Welcome to beeRapp!"), 
                          h3("What is beeRapp?"),
-                         p("Explain the acronym here. 
-                            With beeRapp fundamental analysis techniques become easily applicable to your own data. 
-                            These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
+                         p(" With the BEhavioral Explorative analysis R shiny APP (beeRapp) fundamental analysis techniques become easily applicable 
+                            to your own data. These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
                             All results can be saved in pdf files."),
                          p("beeRapp is written in R. Visit us at", a('GitHub', href='https://github.com/anmabu/beeRapp'), "to see how to contribute."),
                          # br(),
