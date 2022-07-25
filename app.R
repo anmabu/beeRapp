@@ -27,12 +27,12 @@ ui <- fluidPage(
         menuItem("Welcome", tabName = "welcome", icon = icon("compass", lib = "font-awesome")),
         menuItem("Import Data", tabName = "importdata", icon = icon("file-medical")), 
         menuItem("Analysis", tabName = "analysis", icon = icon("biohazard"), 
-                 menuSubItem("Clustering", tabName = "clustering"), #, icon=icon("circle")),
-                 menuSubItem("Boxplots", tabName = "boxplots"), #, icon = icon("box")), 
-                 menuSubItem("Heatmap", tabName = "heatmap"), #, icon = icon("fire")), 
-                 menuSubItem("PCA", tabName = "pca"),
-                 menuSubItem("Correlation Matrix", tabName = "correlationmatrices"), # icon = icon("handshake")), 
-                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations") # , icon = icon("dice-two")), 
+                 menuSubItem("Clustering", tabName = "clustering", icon=icon("angles-right", lib="font-awesome"), 
+                 menuSubItem("Boxplots", tabName = "boxplots", icon=icon("angles-right", lib="font-awesome")), 
+                 menuSubItem("Heatmap", tabName = "heatmap",icon=icon("angles-right", lib="font-awesome")), 
+                 menuSubItem("PCA", tabName = "pca",icon=icon("angles-right", lib="font-awesome")),
+                 menuSubItem("Correlation Matrix", tabName = "correlationmatrices",icon=icon("angles-right", lib="font-awesome")),  
+                 menuSubItem("Pairwise Correlations", tabName = "pairwisecorrelations",icon=icon("angles-right", lib="font-awesome")) 
         )       
       )
     ),
