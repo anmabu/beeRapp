@@ -24,7 +24,7 @@ ui <- fluidPage(
     dashboardHeader(title = "beeRapp"), 
     dashboardSidebar(
       sidebarMenu(
-        menuItem("Welcome", tabName = "welcome", icon = icon("compass")),
+        menuItem("Welcome", tabName = "welcome", icon = icon("compass", lib = "font-awesome")),
         menuItem("Import Data", tabName = "importdata", icon = icon("file-medical")), 
         menuItem("Analysis", tabName = "analysis", icon = icon("biohazard"), 
                  menuSubItem("Clustering", tabName = "clustering"), #, icon=icon("circle")),
