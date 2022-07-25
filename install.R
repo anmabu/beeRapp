@@ -24,17 +24,17 @@ if (R_version < "4.2" & !("BiocManager" %in% availpacks)){
   install.packages("BiocManager")
   
  # install specific version of BiocManager! 
-  if(BiocManager::version() != "3.14"){
-   BiocManager::install(version = "3.14")
-  }
+ # if(BiocManager::version() != "3.14"){
+  # BiocManager::install(version = "3.14")
+  #}
 }
 
 if (R_version >= "4.2" & !("BiocManager" %in% availpacks)){
   install.packages("BiocManager")
   # install specific version of BiocManager! 
-  if (BiocManager::version() != "3.15"){
-   BiocManager::install(version = "3.15")
-  }
+#  if (BiocManager::version() != "3.15"){
+ #  BiocManager::install(version = "3.15")
+  #}
 }
 ################################################################################
 # Install basic required packages if not available/installed.
