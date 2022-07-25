@@ -1,8 +1,8 @@
 # source of this script:
-#    Title: Shiny-Phyloseq
-#    Author: joey711
-#    Date: 17. June 2022
-#    Availability: https://github.com/joey711/shiny-phyloseq
+#    Title: beeRapp
+#    Author: anmabu
+#    Date: 25 July 2022
+#    Availability: https://github.com/anmabu/beeRapp
 
 # modified to fit the R version and packages used in beeRapp
 
