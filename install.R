@@ -24,7 +24,7 @@ if (R_version < "4.2" & !("BiocManager" %in% availpacks)){
   install.packages("BiocManager")
   
  # install specific version of BiocManager! 
-  BiocManager::version() != "3.14"){
+  if(BiocManager::version() != "3.14"){
    BiocManager::install(version = "3.14")
   }
 }
