@@ -17,10 +17,18 @@ if(compareVersion(R_version, R_min_version) == -1){
       "Launch should fail.\n",
       "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
 }
-if (BiocManager::version() != "3.14"){
+
+#Check if correct verion of BiocManager is installed (3.14 for R version 4.1 and 3.15 for R version 4.2 and higher
+if (R_version < "4.2" & BiocManager::version() != "3.14"){
   install.packages("BiocManager")
   # install specific version of BiocManager! 
   BiocManager::install(version = "3.14")
+}
+
+if (R_version >= "4.2" & BiocManager::version() != "3.15"){
+  install.packages("BiocManager")
+  # install specific version of BiocManager! 
+  BiocManager::install(version = "3.15")
 }
 ################################################################################
 # Install basic required packages if not available/installed.
