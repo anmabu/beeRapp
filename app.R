@@ -43,28 +43,25 @@ ui <- fluidPage(
                 fluidRow(
                   column(12, 
                          # box(
-                         h2("Welcome to beeRapp!"), 
-                         h3("What is beeRapp?"),
-                         p(" With the BEhavioral Explorative analysis R shiny APP (beeRapp) fundamental analysis techniques become easily applicable 
+                         shiny::h2("Welcome to beeRapp!"), 
+                         shiny::h3("What is beeRapp?"),
+                         shiny::p(" With the BEhavioral Explorative analysis R shiny APP (beeRapp) fundamental analysis techniques become easily applicable 
                             to your own data. These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
                             All results can be saved in pdf files."),
-                         p("beeRapp is written in R. Visit us at", a('GitHub', href='https://github.com/anmabu/beeRapp'), "to see how to contribute."),
+                         shiny::p("beeRapp is written in R. Visit us at", shiny::a('GitHub', href='https://github.com/anmabu/beeRapp'), "to see how to contribute."),
                          # br(),
-                         h3("How to use beeRapp?"), 
-                         p("To use beeRapp your data must be stored in an .xslx file with the three following tabs:"), 
-                         p(strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
+                         shiny::h3("How to use beeRapp?"), 
+                         shiny::p("To use beeRapp your data must be stored in an .xslx file with the three following tabs:"), 
+                         shiny::p(strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
                            The following columns contain the obtained values with the column names being specified further in the ", strong("labels"), " tab."),
-                         p(strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
+                         shiny::p(strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
                            With 'colnames' being the colnames from ", strong("grand_table"), " which are abbreviations, the labels 1 and 2 the fully written names 
                            of the columns used in data processing and plot representation."),
-                         p(strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
+                         shiny::p(strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
                          # br(),
-                         p("With the .xlsx file setup as described above, you are ready to go!
+                         shiny::p("With the .xlsx file setup as described above, you are ready to go!
                            Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'."),
-                         # p("Feel free to test the process using the example.xlsx file before using your own data. ")
-                          
-                          # title = "Welcome to beeRapp!", solidHeader = T, status = "primary", collapsible = F, width = 12
-                         # ))
+ 
                 ))),
         ## Import Data ####
         tabItem(tabName = "importdata", 
