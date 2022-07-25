@@ -1,4 +1,4 @@
-source("install.R", local = T)
+source("install.R", local = TRUE)
 
 suppressPackageStartupMessages({
   library(corrplot)
