@@ -12,10 +12,10 @@
 ################################################################################
 R_min_version = "4.1.3"
 R_version = paste0(R.Version()$major, ".", R.Version()$minor)
-if(compareVersion(R_version, R_min_version) != 0){
- stop("You do not have the correct version of R installed.\n", 
+if(compareVersion(R_version, R_min_version) %in% c(0,1)){
+ stop("You need to have at least version 4.1.3 of R to run the app.\n", 
       "Launch should fail.\n",
-      "Go to http://cran.r-project.org/ and install version 4.1.3 of R.")
+      "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
 }
 if (BiocManager::version() != "3.14"){
   install.packages("BiocManager")
