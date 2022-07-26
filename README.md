@@ -1,10 +1,7 @@
 # beeRapp
 ## Welcome to beeRapp! 
 ### What is beeRapp?
-With the BEhavioral Explorative analysis R shiny APP (beeRapp), fundamental analysis techniques become easily applicable to your own behavioral data. 
-These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
-All results can be saved in pdf files.
-
+The BEhavioral Explorative analysis R shiny APP (beeRapp) is aimed at animal behavioral researchers without programming and data analysis background. The user-friendly app is designed to provide an easy access to fundamental analysis techniques such as clustering, boxplots visualizarion and pairwise comparisosn, heatmaps, principal component analysis (PCA), correlation matrices and pairwise correlations. All results can be generated via the graphical user interface of the app and the user has the options to control settings such as color schemes or thresholds for statistical significance. All results are automatically genetared and can be exported in .pdf or .pptx format.
 
 beeRapp is written in R. Feel free to contribute if it seems that something is missing!
  
