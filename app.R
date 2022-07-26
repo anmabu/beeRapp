@@ -45,19 +45,29 @@ ui <- fluidPage(
                          # box(
                          shiny::h2("Welcome to beeRapp!"), 
                          shiny::h3("What is beeRapp?"),
-                         shiny::p(" With the BEhavioral Explorative analysis R shiny APP (beeRapp) fundamental analysis techniques become easily applicable 
-                            to your own data. These include clustering, boxplots, heatmaps, PCA, correlation matrices and pairwise correlations.
-                            All results can be saved in pdf files."),
+                         shiny::p("The BEhavioral Explorative analysis R shiny APP (beeRapp) is aimed at animal behavioral researchers without 
+                         programming and data analysis background. The user-friendly app is designed to provide an easy access to f
+                         undamental analysis techniques such as clustering, boxplot visualization and pairwise comparisons, heatmaps, principal component analysis (PCA), 
+                         correlation matrices and pairwise correlations. All results can be generated via the graphical user interface of the app and the user has the options 
+                         to control settings such as color schemes or thresholds for statistical significance. Figures can be exported in .pdf or .pptx format."),
                          shiny::p("beeRapp is written in R. Visit us at", shiny::a('GitHub', href='https://github.com/anmabu/beeRapp'), "to see how to contribute."),
                          # br(),
                          shiny::h3("How to use beeRapp?"), 
-                         shiny::p("To use beeRapp your data must be stored in an .xslx file with the three following tabs:"), 
-                         shiny::p(strong("grand_table"), " includes your collected data. The first column includes the IDs of the tested subject, e.g. animals. 
-                           The following columns contain the obtained values with the column names being specified further in the ", strong("labels"), " tab."),
-                         shiny::p(strong("labels"), " contains three columns which are 'label1', 'label2' and 'colnames'. 
-                           With 'colnames' being the colnames from ", strong("grand_table"), " which are abbreviations, the labels 1 and 2 the fully written names 
-                           of the columns used in data processing and plot representation."),
-                         shiny::p(strong("meta_data"), " contains further information on the the tested subject. With the first column containing IDs, the further columns contain information such as group affiliations."),
+                         shiny::p("To use beeRapp, your data must be stored in an .xslx file with the three following tabs (please mind that the tabs must have the names specified below):"), 
+                         shiny::p(strong("grand_table"), " includes your collected data. The first column contains the IDs of the tested subjects, i.e. animals. The following columns contain the measured values on each behavioral variable.
+                         Values need to be numerical. If you have missing values in your data set,  leave the corresponding cells empty, do not replace missing values with special characters, as this will produce an error!
+                                  The column names for the behavioral measures must only occupy one cell in the input table and they must not contain special characters. A more detailed definition of each column name can be provided in the", strong("labels"), "tab."),
+                         shiny::p(strong("labels"), " contains three columns: 'label1', 'label2' and 'colnames'. 'colnames' corresponds to the column 
+                                  names of the variables in", strong("grand_table"), " . The 'label1' and 'label2' columns provided a more detailed description of the measured variables
+                                  that are also used in data processing and axis labeling on the generated plots. All three columns must be present in the table and column names must 
+                                  match between the", strong("labels"), " and ",  strong("grand_table"), " tables. If the description of the measured variable is not long enough, leave out the cell in 'label1' or 'label2' empty."),
+                         shiny::p(strong("meta_data"), " contains further information on the the tested subjects. The first column contains the animal IDs which must match the IDs in ",
+                                  strong("grand_table"), " . The remaining columns contain information such as group assignment, genotype, treatment, etc. Such grouping factors can be used for statistical comparisons or group annotation on the resulting plots."),
+                         # br(),
+                         
+                         # br(),
+                         shiny::p("An example of how the input table needs to be formatted is provided in the" , strong("example_data"), " folder on our ",
+                                   shiny::a('GitHub', href='https://github.com/anmabu/beeRapp'), "page."),
                          # br(),
                          shiny::p("With the .xlsx file setup as described above, you are ready to go!
                            Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'."),
