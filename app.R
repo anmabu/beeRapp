@@ -332,8 +332,8 @@ server <- function(input, output, session) {
         }
                                         
          #Substitute missing labels with an empty string
-         labels$label1 <- ifelse(is.na(labels$label1), " ", labels$label1) 
-         labels$label2 <- ifelse(is.na(labels$label2), " ", labels$label2)                        
+         #labels$label1 <- ifelse(is.na(labels$label1), " ", labels$label1) 
+         #labels$label2 <- ifelse(is.na(labels$label2), " ", labels$label2)                        
                                         
         # validate order of labels and meta_data
         #SANITY CHECKS
