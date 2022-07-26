@@ -20,6 +20,7 @@ The column names for the behavioral measures must only occupy one cell in the in
 - __meta_data__ contains further information on the the tested subjects. The first column contains the animal IDs. The remaining columns contain information such as group assignment, genotype, treatment, etc. Such grouping factors can be used for statistical comparisons or group annotation on the resulting plots. 
                          
 An example of how the input table needs to be formatted is provided in the _example_data_ folder. These behavioral data were obtained from the following study:
+
 `
 Dopfel, D., Perez, P.D., Verbitsky, A. et al. Individual variability in behavior and functional networks predicts vulnerability using an animal model of PTSD. Nat Commun 10, 2372 (2019). https://doi.org/10.1038/s41467-019-09926-z
 `
