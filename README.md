@@ -21,9 +21,9 @@ The column names for the behavioral measures must only occupy one cell in the in
                          
 An example of how the input table needs to be formatted is provided in the _example_data_ folder. These behavioral data were obtained from the following study:
 
-`
+```
 Dopfel, D., Perez, P.D., Verbitsky, A. et al. Individual variability in behavior and functional networks predicts vulnerability using an animal model of PTSD. Nat Commun 10, 2372 (2019). https://doi.org/10.1038/s41467-019-09926-z
-`
+```
 
 With the .xlsx file setup as described above, you are ready to go! Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'.
 
