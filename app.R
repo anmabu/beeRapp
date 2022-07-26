@@ -314,6 +314,10 @@ server <- function(input, output, session) {
     labels <- reactive({
         req(infile <- input$upload)
         value <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        #Substitute NA values in labels with a string
+        value$label1 <- ifelse(is.na(value$label1), " ", value$label1)
+        value$label2 <- ifelse(is.na(value$label2), " ", value$label2)
+        
         # value["colnames"] <- gsub(" ", "_", value["colnames"])
         for (i in 1:nrow(value)){ # substitute whitespace in colnames to match colnames in grand_table
           value[i, "colnames"] <- gsub(" ", "_", value[i, "colnames"])
@@ -327,14 +331,13 @@ server <- function(input, output, session) {
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
-        
-        #Substitute NA values in labels with a string
-        labels$label1 <- ifelse(is.na(labels$label1), " ", labels$label1)
-        labels$label2 <- ifelse(is.na(labels$label2), " ", labels$label2)
+
         for (i in 1:nrow(labels)){ # substitute whitespace in colnames to match colnames in grand_table
           labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"])
           # print(labels[i, "colnames"])
         }
+        
+
         # validate order of labels and meta_data
         #SANITY CHECKS
         
