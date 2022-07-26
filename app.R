@@ -378,7 +378,7 @@ server <- function(input, output, session) {
         if(!all(labels$colnames %in% colnames(dat)) | !all(colnames(dat) %in% labels$colnames)){
           showModal(modalDialog(
             title = "Input Error", 
-            "Not all animals IDs are present in the meta data table.", 
+            "Not all animal IDs are present in the meta data table.", 
             easyClose = T
           ))
           #Produce error message "Not all animals IDs are present in the meta data table"
@@ -405,8 +405,8 @@ server <- function(input, output, session) {
           if (class(i) != "numeric"){
             showModal(modalDialog(
               title = "Value Error", 
-              "Not all data in 'grand_table' seems to be numeric. 
-              Please make sure, that all values in 'grand_table' are a number.", 
+              "Not all data in 'grand_table' seem to be numeric. 
+              Please make sure, that all values in 'grand_table' are numbers.", 
               easyClose = T
             ))
           }
