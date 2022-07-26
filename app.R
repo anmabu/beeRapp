@@ -317,6 +317,7 @@ server <- function(input, output, session) {
         # value["colnames"] <- gsub(" ", "_", value["colnames"])
         for (i in 1:nrow(value)){ # substitute whitespace in colnames to match colnames in grand_table
           value[i, "colnames"] <- gsub(" ", "_", value[i, "colnames"])
+          # print(labels[i, "colnames"])
         }
         return(value)
     })
@@ -327,14 +328,9 @@ server <- function(input, output, session) {
         meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
         labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
         for (i in 1:nrow(labels)){ # substitute whitespace in colnames to match colnames in grand_table
-          labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"]
-          
+          labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"])
+          # print(labels[i, "colnames"])
         }
-                                        
-         #Substitute missing labels with an empty string
-         labels$label1 <- ifelse(is.na(labels$label1), " ", labels$label1) 
-         labels$label2 <- ifelse(is.na(labels$label2), " ", labels$label2)                        
-                                        
         # validate order of labels and meta_data
         #SANITY CHECKS
         
