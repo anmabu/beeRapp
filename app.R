@@ -908,9 +908,9 @@ server <- function(input, output, session) {
         metadata(meta_data)
         req(infile <- input$upload)
         
-        sheet_names <- list("grand_table" = inputdata()[input$selectionclustering], 
+        sheet_names <- list("grand_table" = inputdata(), 
                             "labels" = labels(), 
-                            "metadata" = metadata())
+                            "meta_data" = metadata())
         write.xlsx(sheet_names, file, rowNames = T, colNames = T)
       })
     
