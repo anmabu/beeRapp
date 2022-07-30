@@ -908,10 +908,10 @@ server <- function(input, output, session) {
         metadata(meta_data)
         req(infile <- input$upload)
         
-        sheet_names <- list("grand_table" = inputdata(), 
+        sheet_names <- list("grand_table" = data.frame("ID" = rownames(inputdata()),inputdata()), 
                             "labels" = labels(), 
-                            "meta_data" = metadata())
-        write.xlsx(sheet_names, file, rowNames = T, colNames = T)
+                            "meta_data" = data.frame("ID" = rownames(meta_data()),metadata()))
+        write.xlsx(sheet_names, file, rowNames = F, colNames = T)
       })
     
     ## PCA ####
