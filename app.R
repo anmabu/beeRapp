@@ -345,7 +345,7 @@ server <- function(input, output, session) {
         #for (i in 1:nrow(labels)){ # substitute whitespace in colnames to match colnames in grand_table
          # labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"])
           # print(labels[i, "colnames"])
-        }
+        #}
         
         mata_data = metadata()
         labels = labels()
@@ -436,7 +436,7 @@ server <- function(input, output, session) {
                        scroller = TRUE,
                        paging = TRUE,
                        dom = 'lBfrtip',
-                       fixedColumns = TRUE),
+                       fixedColumns = FALSE),
       )
         })
     
