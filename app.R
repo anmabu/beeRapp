@@ -315,12 +315,12 @@ server <- function(input, output, session) {
     # loads metadata corresponding to 'grand_table'
     metadata <- reactiveVal()
     # this way "metadata" can be updated when clustering took place
-    observeEvent(input$upload, {
-      # substitute " " in col names with "_"
-      value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = TRUE, colNames=TRUE, sep.names = "_")
-
-      metadata(value)
-    })
+    # observeEvent(input$upload, {
+    #   # substitute " " in col names with "_"
+    #   value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = TRUE, colNames=TRUE, sep.names = "_")
+    # 
+    #   metadata(value)
+    # })
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
         req(infile <- input$upload)
