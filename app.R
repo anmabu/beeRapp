@@ -16,8 +16,9 @@ suppressPackageStartupMessages({
 
 
 # Global Variables ####
-color_values <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
-# renv::init("/mnt/sda2/Dokumente/Bioinformatik/6.Semester/Behavior_GUI/Shiny_Behavior_GUI/", bioconductor = T)
+color_values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
+names(color_values) = c("black", "orange", "soft blue", "lime green", "bright yellow",
+                        "dark blue", "red", "pink", "violet")
 # UI ####
 ui <- fluidPage(
   dashboardPage(
@@ -232,7 +233,7 @@ ui <- fluidPage(
                 ),
                 fluidRow(column(12, 
                                 box(plotOutput("examplepca"), 
-                                    title = "PCA", width = 12, solidHeader = T, status = "primary")
+                                    title = "PCA", width = 6, solidHeader = T, status = "primary")
                          )
                 )
         ),
@@ -314,15 +315,16 @@ server <- function(input, output, session) {
     # loads metadata corresponding to 'grand_table'
     metadata <- reactiveVal()
     # this way "metadata" can be updated when clustering took place
-    observeEvent(input$upload, {
-      # substitute " " in col names with "_"
-      value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_") 
-     
-      metadata(value)
-    })
+    # observeEvent(input$upload, {
+    #   # substitute " " in col names with "_"
+    #   value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = T, colNames=T, sep.names = "_")
+    # 
+    #   metadata(value)
+    # })
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
         req(infile <- input$upload)
+        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
         value <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
         #Substitute NA values in labels with a string
         value$label1 <- ifelse(is.na(value$label1), " ", value$label1)
@@ -333,28 +335,39 @@ server <- function(input, output, session) {
           value[i, "colnames"] <- gsub(" ", "_", value[i, "colnames"])
           # print(labels[i, "colnames"])
         }
+        
+        #3. Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
+        #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
+        
+        vec <- colnames(dat) == value$colnames
+        
+        if(all(vec) == FALSE & ncol(dat) == nrow(value) & all(value$colnames %in% colnames(dat))){
+            value = value[base::match(colnames(dat), value$colnames),]
+            
+        }
+        if(all(vec) == FALSE & (ncol(dat) != nrow(value) | !all(value$colnames %in% colnames(dat)))){
+            #Produce an error message: "Please make sure that the column names in the data table match the value in the value table")
+            showModal(modalDialog(
+                title = "Input Error", 
+                "Please make sure that the column names in the data table match the labels in the labels table.", 
+                easyClose = T
+            ))
+        }
+        
         return(value)
     })
     # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
         req(infile <- input$upload)
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
-        #meta_data <- read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_")
-        #labels <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
-
-        #for (i in 1:nrow(labels)){ # substitute whitespace in colnames to match colnames in grand_table
-         # labels[i, "colnames"] <- gsub(" ", "_", labels[i, "colnames"])
-          # print(labels[i, "colnames"])
-        #}
-        
-        mata_data = metadata()
-        labels = labels()
+        meta_data <- openxlsx::read.xlsx(infile$datapath, "meta_data", colNames = T, sep.names = "_", rowNames = T)
+ 
         # validate order of labels and meta_data
         #SANITY CHECKS
         
         #1. The meta_data table should contain all animal id's as in the data_table. If not the case, an error message should be produced
         
-        if(!all(meta_data$animal %in% rownames(dat)) | !all(rownames(dat) %in% meta_data$animal)){
+        if(!all(rownames(meta_data) %in% rownames(dat)) | !all(rownames(dat) %in% rownames(meta_data))){
           showModal(modalDialog(
             title = "Input Error", 
              "Not all animals IDs are present in the data table or meta data table.", 
@@ -367,14 +380,25 @@ server <- function(input, output, session) {
         #If this is not the case, then reorder the meta_data table to match the data_table 
         #This is however only performed if the dimensions of the tables match and all animal IDs are available in both tables
         
-        vec <- rownames(dat) == meta_data$animal 
+        vec <- rownames(dat) == rownames(meta_data) 
         
         
-        if(all(vec) == FALSE  & nrow(dat) == nrow(meta_data) & all(meta_data$animal %in% rownames(dat))){
-          meta_data = meta_data[base::match(rownames(dat), meta_data$animal),]
+        if(all(vec) == FALSE  & nrow(dat) == nrow(meta_data) & all(rownames(meta_data) %in% rownames(dat))){
+          if(ncol(meta_data)>1){
+              meta_data = meta_data[base::match(rownames(dat), rownames(meta_data)),]
+              metadata(meta_data)
+          }else{
+              varname = colnames(meta_data)[1]
+              meta_data = meta_data[base::match(rownames(dat), rownames(meta_data)),]
+              meta_data = data.frame(meta_data)
+              colnames(meta_data) = varname
+              rownames(meta_data) = rownames(dat)
+              metadata(meta_data)
+          }
+
         }
         
-        if(all(vec) == FALSE & (nrow(dat) != nrow(meta_data) | !all(meta_data$animal %in% rownames(dat)))){
+        if(all(vec) == FALSE & (nrow(dat) != nrow(meta_data) | !all(rownames(meta_data) %in% rownames(dat)))){
           #Produce an error message: "Please make sure that the animal IDs match in the data and meta data tables")
           showModal(modalDialog(
             title = "Input Error", 
@@ -383,34 +407,8 @@ server <- function(input, output, session) {
           ))
         }
         
-        #3. The labels table contains the description of the behavioral variables (columns in the data_table). Check if the column names are 
-        #all present in the labels table. If they are not, produce an error message
-        
-        if(!all(labels$colnames %in% colnames(dat)) | !all(colnames(dat) %in% labels$colnames)){
-          showModal(modalDialog(
-            title = "Input Error", 
-            "Not all animal IDs are present in the meta data table.", 
-            easyClose = T
-          ))
-          #Produce error message "Not all animals IDs are present in the meta data table"
-        }
-        
-        #4. Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
-        #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
-        
-        vec <- colnames(dat) == labels$colnames
-        
-        if(all(vec) == FALSE & ncol(dat) == nrow(labels) & all(labels$colnames %in% colnames(dat))){
-          labels = labels[base::match(colnames(dat), labels$colnames),]
-        }
-        if(all(vec) == FALSE & (ncol(dat) != nrow(labels) | !all(labels$colnames %in% colnames(dat)))){
-          #Produce an error message: "Please make sure that the column names in the data table match the labels in the labels table")
-          showModal(modalDialog(
-            title = "Input Error", 
-            "Please make sure that the column names in the data table match the labels in the labels table.", 
-            easyClose = T
-          ))
-        }
+
+
         # validate that all values are numeric
         for (i in dat) {
           if (class(i) != "numeric"){
