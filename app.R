@@ -911,7 +911,7 @@ server <- function(input, output, session) {
         sheet_names <- list("grand_table" = data.frame("ID" = rownames(inputdata()),inputdata()), 
                             "labels" = labels(), 
                             "meta_data" = data.frame("ID" = rownames(metadata()),metadata()))
-        write.xlsx(sheet_names, file, rowNames = F, colNames = T)
+        openxlsx::write.xlsx(sheet_names, file, rowNames = F, colNames = T)
       })
     
     ## PCA ####
