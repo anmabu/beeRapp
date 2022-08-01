@@ -325,7 +325,7 @@ server <- function(input, output, session) {
     labels <- reactive({
         req(infile <- input$upload)
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = T, sep.names = "_")
-        value <- read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
+        value <- openxlsx::read.xlsx(infile$datapath, "labels", colNames = T, sep.names = "_")
         #Substitute NA values in labels with a string
         value$label1 <- ifelse(is.na(value$label1), " ", value$label1)
         value$label2 <- ifelse(is.na(value$label2), " ", value$label2)
