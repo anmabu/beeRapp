@@ -317,7 +317,7 @@ server <- function(input, output, session) {
     # this way "metadata" can be updated when clustering took place
     observeEvent(input$upload, {
       # substitute " " in col names with "_"
-      value <- read.xlsx(input$upload$datapath, "meta_data", rowNames = TRUE, colNames=TRUE, sep.names = "_")
+      value <- openxlsx::read.xlsx(input$upload$datapath, "meta_data", rowNames = TRUE, colNames=TRUE, sep.names = "_")
 
       metadata(value)
     })
