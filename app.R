@@ -336,7 +336,7 @@ server <- function(input, output, session) {
           # print(labels[i, "colnames"])
         }
         
-        #3. Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
+        #Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
         #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
         
         vec <- colnames(dat) == value$colnames
@@ -356,6 +356,7 @@ server <- function(input, output, session) {
         
         return(value)
     })
+    
     # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
         req(infile <- input$upload)
