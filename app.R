@@ -324,7 +324,7 @@ server <- function(input, output, session) {
     # loads labels corresponding to 'grand_table'
     labels <- reactive({
         req(infile <- input$upload)
-        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = TRUE, sep.names = "_")
+        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = TRUE, colNames = TRUE, sep.names = "_")
         value <- openxlsx::read.xlsx(infile$datapath, "labels", colNames = TRUE, sep.names = "_")
         #Substitute NA values in labels with a string
         value$label1 <- ifelse(is.na(value$label1), " ", value$label1)
@@ -360,7 +360,7 @@ server <- function(input, output, session) {
     # Load 'grand_table' Data and Evaluate completeness. 
     inputdata <- reactive({
         req(infile <- input$upload)
-        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = T, colNames = TRUE, sep.names = "_")
+        dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = TRUE, colNames = TRUE, sep.names = "_")
         meta_data <- openxlsx::read.xlsx(infile$datapath, "meta_data", colNames = TRUE, sep.names = "_", rowNames = T)
  
         # validate order of labels and meta_data
@@ -911,7 +911,7 @@ server <- function(input, output, session) {
         sheet_names <- list("grand_table" = data.frame("ID" = rownames(inputdata()),inputdata()), 
                             "labels" = labels(), 
                             "meta_data" = data.frame("ID" = rownames(metadata()),metadata()))
-        openxlsx::write.xlsx(sheet_names, file, rowNames = F, colNames = TRUE)
+        openxlsx::write.xlsx(sheet_names, file, rowNames = FALSE, colNames = TRUE)
       })
     
     ## PCA ####
