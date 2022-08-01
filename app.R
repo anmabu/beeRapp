@@ -361,7 +361,7 @@ server <- function(input, output, session) {
     inputdata <- reactive({
         req(infile <- input$upload)
         dat <- openxlsx::read.xlsx(infile$datapath, "grand_table", rowNames = TRUE, colNames = TRUE, sep.names = "_")
-        meta_data <- openxlsx::read.xlsx(infile$datapath, "meta_data", colNames = TRUE, sep.names = "_", rowNames = T)
+        meta_data <- openxlsx::read.xlsx(infile$datapath, "meta_data", colNames = TRUE, sep.names = "_", rowNames = TRUE)
  
         # validate order of labels and meta_data
         #SANITY CHECKS
