@@ -72,6 +72,8 @@ ui <- fluidPage(
                          # br(),
                          shiny::p("With the .xlsx file setup as described above, you are ready to go!
                            Select 'Import Data' on the left and upload your file. Once uploaded, you can analyse the data with the tools provided under 'Analysis'."),
+                         # br(),
+                         shiny::p("You can send feedback your report issues to hristo.todorov@uni-mainz.de"),
  
                 ))),
         ## Import Data ####
