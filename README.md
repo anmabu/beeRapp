@@ -61,3 +61,7 @@ beeRapp can also be started from the terminal by running
 	Rscript app.R
 `
 and opening the link in the browser of your choice. 
+
+### Send feedback and report issues
+
+You can send your feedback or report issues directly to hristo.todorov@uni-mainz.de.
