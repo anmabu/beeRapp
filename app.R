@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(openxlsx)
   library(shiny)
   library(shinydashboard)
+  library(stringr)
   # library(sets)
 })
 
@@ -332,12 +333,18 @@ server <- function(input, output, session) {
         value$label1 <- ifelse(is.na(value$label1), " ", value$label1)
         value$label2 <- ifelse(is.na(value$label2), " ", value$label2)
         
-        # value["colnames"] <- gsub(" ", "_", value["colnames"])
-        for (i in 1:nrow(value)){ # substitute whitespace in colnames to match colnames in grand_table
-          value[i, "colnames"] <- gsub(" ", "_", value[i, "colnames"])
-          # print(labels[i, "colnames"])
-        }
+        #Substitue white space in the colnames column of the labels table with "_" to match column names in grand_table
+        #First remove potential empty spaces at the beginning or end of the string, as these are removed automatically in the grand_table import
         
+        value$colnames = stringr::str_trim(value$colnames)
+        
+        #Then reduce multiple white spaces to 1 as this is done automatically to colnames during the import of grand_table
+        value$colnames = stringr::str_squish(value$colnames)
+        
+        #Finally replace the empty space with "_"
+        value$colnames = gsub(" ", "_", value$colnames)
+
+                
         #Check if the order of the columns in data_table matches the order of the column names in the labels table and reorder if not
         #Only done if dimensions between the tables match and all column names are contained in both tables and only the order is wrong
         
