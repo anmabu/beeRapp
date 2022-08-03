@@ -86,7 +86,7 @@ correlationMatrix <- function(data_table, outDir,
 #color_groups - a vector with as many values as levels of the "grouping" argument
 #subset - a vector containing column indices in case the user once to calculate the matrix for a subset of the data
 
-pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf", 
+pairwiseCorrelations <- function(file, data_table, labels, format = "pdf", 
                                  type = "pearson", threshold = 0.05, 
                                  grouping = NULL, color_groups = NULL, 
                                  subset = NULL, 
@@ -98,13 +98,13 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
     labels <- labels[subset,]
   }
   #Determine the output format selected by the user 
-  if(format == ".pdf"){
+  if(format == "pdf"){
     pdf(file, height=4.5, width = 5.5)
   }
-  if(format == ".pptx"){
+  if(format == "pptx"){
     doc <- officer::read_pptx()
   }
-  if(format == ".zip"){   
+  if(format == "zip"){   
     fs <- c()
   }
   # add progress bar
@@ -192,7 +192,7 @@ pairwiseCorrelations <- function(file, data_table, labels, format = ".pdf",
 
 
 ## Pairwise Correlations Example ####
-pairwiseCorrelations.example <- function(data_table, labels, format = ".pdf", 
+pairwiseCorrelations.example <- function(data_table, labels, format = "pdf", 
                                  type = "pearson", threshold = 0.05, 
                                  grouping = NULL, color_groups = NULL, 
                                  subset = NULL, 
