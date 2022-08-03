@@ -164,27 +164,27 @@ pairwiseCorrelations <- function(file, data_table, labels, format = "pdf",
         }
         p = p+ ggplot2::annotate(geom = "text", x = xcoord, y = 1.2*ymax,
                                  label=lab1, fontface=3, size=4.5)
-        if (format == ".zip"){
+        if (format == "zip"){
           fs <- c(fs, paste0(labels$colnames[i], labels$colnames[j], ".pdf"))
           pdf(paste0(labels$colnames[i], labels$colnames[j], ".pdf"), height = 4.5, width = 5.5)
           print(p)
           dev.off()
         }
-        if(format == ".pptx"){
+        if(format == "pptx"){
           doc <- officer::add_slide(doc)
           doc <- officer::ph_with(x = doc, value = p, location =ph_location(type="body",width=6, height=4.5), res=600)
         } else {print(p)}
       }
     }
   }
-  if (format == ".zip"){
+  if (format == "zip"){
     zip(zipfile = file, files = fs)
     # clean up pdf files in working directory after zipping together
     for (elem in fs){
       system(paste("rm -f", elem)) 
     }
   }
-  if(format == ".pptx"){
+  if(format == "pptx"){
     print(doc, target = file) 
   } else {
     dev.off()}
