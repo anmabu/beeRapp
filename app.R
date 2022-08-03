@@ -16,8 +16,8 @@ suppressPackageStartupMessages({
 
 
 # Global Variables ####
-color_values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
-names(color_values) = c("black", "orange", "soft blue", "lime green", "bright yellow",
+color_values = c("#000000", "green2", "magenta", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#5D3A9B")
+names(color_values) = c("black", "neon green", "magenta", "orange", "soft blue", "lime green", "bright yellow",
                         "dark blue", "red", "pink", "violet")
 # UI ####
 ui <- fluidPage(
