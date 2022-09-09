@@ -28,39 +28,25 @@ With the .xlsx file setup as described above, you are ready to go! Select 'Impor
 
 ### Setup
 
-#### The easy way (recommended)
 Install R (we recommed at least version 4.1.3 or higher). 
 
-Start R in your terminal and run
+Start R in your terminal or RStudio and run
 
 ```
 	install.packages("shiny")
 	shiny::runGitHub("beeRapp", "anmabu")
 ```
 
+The first time you run these commands, all required packages will be installed if they are missing in your R environment. 
+ATTENTION: running the app for the first time might take a long time (up to 30 min) untill all missing packages are installed!
 
-#### The hard way
-Install R version 4.1.3 and download the files in this repository. 
+After the successful setup, the app will open in your browser.
+Following the initial setup, you can start the app again (this should take a couple of seconds) using the command:
 
-Start R in your terminal and run
+```
+	shiny::runGitHub("beeRapp", "anmabu")
+```
 
-`
-install.packages("renv")
-`
-
-Open the beeRapp folder in your terminal and execute the following command to install and load all required packages:
-
-`
-	renv::restore()
-`
-
-If RStudio is installed, open app.R with it and start the app using the 'Run App' Button. 
-beeRapp can also be started from the terminal by running  
-
-`
-	Rscript app.R
-`
-and opening the link in the browser of your choice. 
 
 ### Send feedback and report issues
 
