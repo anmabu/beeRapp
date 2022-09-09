@@ -4,19 +4,18 @@
 #    Date: 25 July 2022
 #    Availability: https://github.com/anmabu/beeRapp
 
-# modified to fit the R version and packages used in beeRapp
 
 ################################################################################
 # Check that the currently-installed version of R
 # is the correct version
 ################################################################################
-R_min_version = "4.1.3"
-R_version = paste0(R.Version()$major, ".", R.Version()$minor)
-if(compareVersion(R_version, R_min_version) == -1){
- stop("You need to have at least version 4.1.3 of R to run the app.\n", 
-      "Launch should fail.\n",
-      "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
-}
+#R_min_version = "4.1.3"
+#R_version = paste0(R.Version()$major, ".", R.Version()$minor)
+#if(compareVersion(R_version, R_min_version) == -1){
+# stop("You need to have at least version 4.1.3 of R to run the app.\n", 
+ #     "Launch should fail.\n",
+  #    "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
+#}
 
 #Check if BiocManager is installed and install otherwise
 availpacks = .packages(all.available = TRUE)
@@ -77,7 +76,8 @@ deppkgs = c(corrplot = "0.92",
             mclust = "5.4.10", 
             mixOmics = "6.18.1", 
             ggrepel = "0.9.1",
-            stringr = "1.4.0"
+            stringr = "1.4.0",
+            coin = "1.4.2
             )
 # Loop on package check, install, update
 pkg1 = mapply(install_missing_packages,
