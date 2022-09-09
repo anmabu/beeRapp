@@ -45,16 +45,18 @@ The following columns contain the measured values on each behavioral variable. V
 The column names for the behavioral measures must only occupy one cell in the input table and they must not contain special characters. A more detailed definition of each column name can be provided in the _labels_ tab. 
 
 The grand table for the Dopfel et al. data set can be seen below.
-<img width="1026" alt="image" src="https://user-images.githubusercontent.com/73937893/189454890-7aefdce4-d9c4-4265-b65a-fdfa9d464481.png">
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/189454890-7aefdce4-d9c4-4265-b65a-fdfa9d464481.png">
 
 - __labels__ contains three columns: 'label1', 'label2' and 'colnames'. 
 'colnames' corresponds to the column names of the variables in _grand_table_. The 'label1' and 'label2' columns provided a more detailed description of the measured variables that are also used in data processing and axis labeling on the generated plots. All three columns must be present in the table and column names must match between the _labels_ and _grand_table_ tables. The value in the 'label1' column corresponds to the first line of text that will be displayed on the axis labels of boxplots and correlation plots, 'label2' corresponds to the second line. Either of these values can be left empty if the variable description is not long and would fit on a single line on the plot axis.
 
-<img width="1026" alt="image" src="https://user-images.githubusercontent.com/73937893/189455448-2c3ce4e2-1ed8-458e-a190-474a2fa9172a.png">
+<img width="700" alt="image" src="https://user-images.githubusercontent.com/73937893/189455448-2c3ce4e2-1ed8-458e-a190-474a2fa9172a.png">
 
 - __meta_data__ contains further information on the the tested subjects. The first column contains the animal IDs which must match the IDs in _grand_table_. The remaining columns contain information such as group assignment, genotype, treatment, etc. Such grouping factors can be used for statistical comparisons or group annotation on the resulting plots. 
 
-<img width="612" alt="image" src="https://user-images.githubusercontent.com/73937893/189455564-c1d0ec78-6f0a-4ca2-9c6c-aa035e1ffc96.png">                         
+Our example data set only contains one meta data category which is the group assignment of animals to either control or fox urine treatment. We can use this group variable later for statistical comparisons.
+
+<img width="400" alt="image" src="https://user-images.githubusercontent.com/73937893/189455564-c1d0ec78-6f0a-4ca2-9c6c-aa035e1ffc96.png">                         
 
 
 ### Send feedback and report issues
