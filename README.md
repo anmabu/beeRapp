@@ -59,6 +59,7 @@ The grand table for the Dopfel et al. data set can be seen below.
 Our example data set only contains one meta data category which is the group assignment of animals to either control or fox urine treatment. We can use this group variable later for statistical comparisons.
 
 <img width="400" alt="image" src="https://user-images.githubusercontent.com/73937893/189455564-c1d0ec78-6f0a-4ca2-9c6c-aa035e1ffc96.png">                         
+
 ### Starting the app and importing the data
 
 Once we have prepared our data set in the right format, we can run beeRapp which will be opened in your browser.
