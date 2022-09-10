@@ -77,7 +77,7 @@ deppkgs = c(corrplot = "0.92",
             mixOmics = "6.18.1", 
             ggrepel = "0.9.1",
             stringr = "1.4.0",
-            coin = "1.4.2
+            coin = "1.4.2"
             )
 # Loop on package check, install, update
 pkg1 = mapply(install_missing_packages,
