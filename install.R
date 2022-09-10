@@ -9,13 +9,13 @@
 # Check that the currently-installed version of R
 # is the correct version
 ################################################################################
-#R_min_version = "4.1.3"
-#R_version = paste0(R.Version()$major, ".", R.Version()$minor)
-#if(compareVersion(R_version, R_min_version) == -1){
-# stop("You need to have at least version 4.1.3 of R to run the app.\n", 
- #     "Launch should fail.\n",
-  #    "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
-#}
+R_min_version = "4.1.3"
+R_version = paste0(R.Version()$major, ".", R.Version()$minor)
+if(compareVersion(R_version, R_min_version) == -1){
+ stop("You need to have at least version 4.1.3 of R to run the app.\n", 
+      "Launch should fail.\n",
+      "Go to http://cran.r-project.org/ and install version 4.1.3 of R or higher.")
+}
 
 #Check if BiocManager is installed and install otherwise
 availpacks = .packages(all.available = TRUE)
