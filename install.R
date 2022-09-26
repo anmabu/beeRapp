@@ -78,7 +78,8 @@ deppkgs = c(corrplot = "0.92",
             ggrepel = "0.9.1",
             stringr = "1.4.0",
             coin = "1.4.2",
-            NbClust = "3.0.1"
+            NbClust = "3.0.1",
+            grDevices = "4.2.1"
             )
 # Loop on package check, install, update
 pkg1 = mapply(install_missing_packages,
