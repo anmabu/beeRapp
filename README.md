@@ -84,7 +84,7 @@ Once we have selected the variables, clustering algorithm and the number of clus
 
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/189503666-4dda8701-80ff-4bda-bc1f-a6bca0741a36.png">
 
-We can also save our clustering results with the _Save Clustering button. This will create a new excel file which contains clustering assignment as an additional column in the meta data table. We we want to use clustering as a grouping variable in subsequent analysis, we will have to go back an import the new table in beeRapp.
+We can also save our clustering results with the _Save Clustering_ button. This will create a new excel file which contains clustering assignment as an additional column in the meta data table. We we want to use clustering as a grouping variable in subsequent analysis, we will have to go back an import the new table in beeRapp.
 
 <img width="400" alt="image" src="https://user-images.githubusercontent.com/73937893/189504032-4c8b61c7-8ae0-4852-9b19-e89a7ef2a539.png">
 
