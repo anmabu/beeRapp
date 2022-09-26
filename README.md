@@ -36,7 +36,7 @@ functional networks predicts vulnerability using an animal model of PTSD. Nat Co
 2372 (2019). https://doi.org/10.1038/s41467-019-09926-z
 ```
 
-Dopfel et al. investigzated freezing responses of rats exposed to a predator scent (fox urine) compared to a control group, as a model for post-traumatic stress disorder. The data set can be found in the _example data_ folder. 
+Dopfel et al. investigated freezing responses of rats exposed to a predator scent (fox urine) compared to a control group, as a model for post-traumatic stress disorder. The data set can be found in the _example data_ folder. 
 
 ### Formatting the input data
 
