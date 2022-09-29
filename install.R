@@ -81,7 +81,8 @@ deppkgs = c(corrplot = "0.92",
             NbClust = "3.0.1",
             grDevices = "4.2.1",
             mice = "3.14.0",
-            rmarkdown = "2.16"
+            rmarkdown = "2.16",
+            BiocGenerics = "0.42.0"
             )
 
 # Loop on package check, install, update
