@@ -18,7 +18,7 @@ Start R in your terminal or RStudio and run
 ```
 
 The first time you run these commands, all required packages will be installed if they are missing in your R environment. 
-ATTENTION: running the app for the first time might take a long time (up to 30 min) untill all missing packages are installed!
+ATTENTION: running the app for the first time might take a long time (up to 30 min) until all missing packages are installed!
 
 After the successful setup, the app will open in your browser.
 Following the initial setup, you can start the app again (this should take a couple of seconds) using the command:
@@ -44,7 +44,7 @@ The input data must be stored in an .xslx file with the three following tabs (pl
 
 - __grand_table__ includes your collected data. The first column contains the IDs of the tested subjects, i.e. animals. 
 The following columns contain the measured values on each behavioral variable. Values need to be numerical. If you have missing values in your data set, leave the corresponding cells empty, do not replace missing values with special characters, as this will produce an error!
-The column names for the behavioral measures must only occupy one cell in the input table and they must not contain special characters. A more detailed definition of each column name can be provided in the _labels_ tab. 
+The column names for the behavioral measures must only occupy one cell in the input table and they must not contain special characters. A more detailed descritpion of each column name can be provided in the _labels_ tab. 
 
 The grand table for the Dopfel et al. data set can be seen below.
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/189454890-7aefdce4-d9c4-4265-b65a-fdfa9d464481.png">
