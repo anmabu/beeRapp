@@ -1,0 +1,150 @@
+---
+title: "Pairwise comparisons analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  test: "t.test"
+  pval: 0.05
+  outliers: FALSE
+  data_table: NULL
+  labels: NULL
+  grouping: NULL
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+The significance threshold for pairwise comparisons was set to p-val < ``r params$pval``. \
+Only comparisons with a p-value below this cut-off are included in the results file. \
+All p-values are two-tailed and no adjustment for multiple comparisons was performed.\
+
+```{r, echo = FALSE, results='asis'}
+if(params$test == "t.test"){
+    
+    #Pval for variane ratio test
+    pvar_test = data.frame(variable = paste(params$labels[,1], params$labels[,2]),
+                           pval_var = rep(NA, ncol(params$data_table)), 
+                           test = rep(NA, ncol(params$data_table)))
+    
+    
+    for(i in 1:ncol(params$data_table)){
+      p.var = stats::var.test(params$data_table[,i]~params$grouping)$p.value
+      
+      pvar_test$pval_var[i] = p.var  
+    }    
+    
+    pvar_test$test = ifelse(pvar_test$pval_var<0.05, "Welch's t-test", "T-test")
+    
+    cat("You selected a t-test. Therefore, beeRapp automatically checked it the variance
+        between groups is equal using the var.test function. If yes, an unpaired t-test was performed. If variance was unequal, Welch's t-test was performed, instead. The table below shows which type of test was performed for each variable. \n")
+   
+    
+  datatable(pvar_test[,c(1,3)], extensions = c('FixedColumns', "Scroller", "Buttons"), options = list(
+  dom = 'Bfrtip',
+  deferRender = TRUE,
+  scrollY = 200,
+  scroller = TRUE,
+  buttons = "excel",
+  scrollX = TRUE
+))
+    
+}
+
+if(params$test == "wilcox"){
+    cat("Pairwise comparisons were performed with a non-parametric Wilcoxon rank sum test.")
+}
+if(params$test == "permutation-test"){
+    cat("Pairwise comparisons were performed with a permutation based test as implemented in the independence_test function from the coin R package.")
+}
+```
+
+\
+
+```{r, echo = FALSE, results='asis'}
+
+if(params$outliers == TRUE){
+    cat('###', "Outlier analysis", '\n')
+    cat("You chose to perform and outlier screening and remove outliers from the analysis.To this end, beeRapp first transformed each measurement to a z-score by subtracting the group mean and dividing by the standard deviation for each variable. Z-scores exceeding 3.29 in absolute value (p<0.001) were considered outliers and removed from the analysis.", '  \n', '  \n')
+    cat('#####', 'Outlier detection results', '  \n')
+    
+    
+    #Create a data table for outliers
+    outliers_df = data.frame(variable = paste(params$labels[,1], params$labels[,2]),
+                             outliers =  rep(NA, ncol(params$data_table)))
+    
+    
+    #Transform grouping to a factor
+    grouping = factor(params$grouping)
+    
+    for (i in 1:ncol(params$data_table)){
+      
+      y_var = params$data_table[,i]
+      names(y_var) = rownames(params$data_table)
+      group1 = y_var[grouping == base::levels(grouping)[1]]
+      group2 = y_var[grouping == base::levels(grouping)[2]]
+      
+      #Transform values to z-scores
+      group1_z = (group1 -  base::mean(stats::na.omit(group1)))/stats::sd(stats::na.omit(group1))
+      group2_z = (group2 - base::mean(stats::na.omit(group2)))/stats::sd(stats::na.omit(group2))
+      
+      #get potential outliers
+    outliers1 = base::names(na.omit(group1_z))[base::abs(na.omit(group1_z))>3.29]
+    outliers2 = base::names(na.omit(group2_z))[base::abs(na.omit(group2_z))>3.29]
+    outliers = c(outliers1, outliers2)
+      
+    
+      if(length(outliers > 0)){
+        
+        outliers_df$outliers[i] = paste(outliers, collapse = ",")
+    }
+      
+    
+    }
+
+          if(all(is.na(outliers_df$outliers))){
+              cat("There were no outliers detected in any of the variables.")
+          
+          }else{
+          cat("The table below provides an overview of detected outliers. The values
+              correspond to rownames in the original data table that were flagged as outliers and removed from the analysis for each variable.", "\n")
+              
+        datatable(outliers_df, extensions = c('FixedColumns', "Scroller", "Buttons"), options = list(
+  dom = 'Bfrtip',
+  deferRender = TRUE,
+  scrollY = 200,
+  scroller = TRUE,
+  buttons = "excel",
+  scrollX = TRUE
+))
+      }
+ 
+}       
+```
+
+
+### Session info
+This analysis was performed with beeRapp's 'Boxplots' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+if(params$test == "permutation-test"){
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+    paste("ggplot2", packageVersion("ggplot2")),
+    paste("stats", packageVersion("stats")),
+    paste("coin", packageVersion("coin")))
+    print(info)
+}else{
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+    paste("ggplot2", packageVersion("ggplot2")),
+    paste("stats", packageVersion("stats")))
+    print(info)
+}
+
+```
+
+
+
