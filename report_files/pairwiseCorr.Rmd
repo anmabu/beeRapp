@@ -1,0 +1,35 @@
+---
+title: "Pairwise correlations analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  corrtype: "pearson"
+  pval: 0.05
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+
+The correlation coefficient (r) shown on the plots corresponds to the ``r params$corrtype`` correlation coefficient.\
+Only pairwise correlations with a p-value < ``r params$pval`` were calculated. \
+Correlation coefficients and p-values were calculated with the cor.test() function. \
+P-values were not corrected for multiple comparisons.
+
+### Session info
+This analysis was performed with beeRapp's 'Pairwise Correlations' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("ggplot2", packageVersion("ggplot2")),
+paste("stats", packageVersion("stats")))
+print(info)
+```
+
+
+
