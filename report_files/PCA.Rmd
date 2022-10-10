@@ -1,0 +1,51 @@
+---
+title: "Principal component analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  missing_vals: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+```{r echo = FALSE, results='asis'}
+
+if (params$missing_vals == FALSE){
+    cat("PCA was performed on the mean centered and scaled input data matrix
+        using the prcomp function from the stats package. The values on each axis correspond to the percentage of variance explained
+        by each principal component.")
+}else{
+    cat("Your input data contained missing values. Therefore, PCA was performed
+        with the pca function from the mixOmics package. Please note that any variables
+        with more than 40% missing values, were dropped from the analysis. The values on each axis correspond to the percentage of variance explained
+        by each principal component.")
+}
+
+```
+
+### Session info
+
+This analysis was performed with beeRapp's 'PCA' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+if (params$missing_vals == FALSE){
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+    paste("ggplot2", packageVersion("ggplot2")),
+    paste("stats", packageVersion("stats")))
+    print(info)
+}else{
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+    paste("ggplot2", packageVersion("ggplot2")),
+    paste("mixOmics", packageVersion("mixOmics")))
+    print(info)
+}
+
+```
+
+
+
