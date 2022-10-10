@@ -10,23 +10,21 @@ library(ggpubr)
 library(mixOmics)
 library(ggrepel)
 library(officer)
-
+library(NbClust)
 
 # Correlation Matrix all Variables ####
 #Function to calculate a correlation matrix for the behavioural data matrix
 
 #ARGUMENTS
 #data_table - the input data frame 
-#outDir - the output directory where the file will be saved
-#filename - name of the output file
 #type - type of the correlation, by default "pearson", can be changed to "spearman" for non-parametric correlation
 #threshold - the cutoff p-value for considering a correlation to be statistically significant, by default 0.05
 #subset - a vector containing column indices in case the user once to calculate the matrix for a subset of the data
+#color_palette - a character defining the color palette for the matrix
 
-
-correlationMatrix <- function(data_table, outDir, 
-                              filename, type = "pearson", 
-                              threshold  = 0.05, subset = NULL){
+correlationMatrix <- function(data_table, type = "pearson", 
+                              threshold  = 0.05, subset = NULL,
+                              color_palette = "RdBu"){
   
   if(!is.null(subset)){
     cormat = Hmisc::rcorr(as.matrix(data_table[,subset]), type = type) 
@@ -64,10 +62,9 @@ correlationMatrix <- function(data_table, outDir,
     font_size=0.6
   }
   
-  # pdf(paste0(outDir, "/", filename, ".pdf"), height = height, width = width)
-  corrplot::corrplot(cormat_r, tl.col = "black", tl.srt = 60, tl.cex = font_size, mar = c(0,0,2,2))
-  # dev.off()
-  
+  corrplot::corrplot(cormat_r, tl.col = "black", tl.srt = 60, 
+                     tl.cex = font_size, mar = c(0,0,2,2),
+                     col = corrplot::COL2(color_palette, n =100))
   
 }
 
@@ -277,6 +274,8 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
                                 subset = NULL,
                                 animal_label = FALSE){
   
+
+
   #Perform the analysis only for a subset of variables 
   if(!is.null(subset)){
     data_table = data_table[,subset]
@@ -307,7 +306,6 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
     
     #Screen for outliers and remove them if remove_outliers = TRUE
     if(remove_outliers == TRUE){
-      
       y_var = data_table[,i]
       names(y_var) = rownames(data_table)
       group1 = y_var[grouping == base::levels(grouping)[1]]
@@ -318,10 +316,11 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
       group2_z = (group2 - base::mean(stats::na.omit(group2)))/stats::sd(stats::na.omit(group2))
       
       #get potential outliers
-      outliers1 = base::names(group1_z)[base::abs(group1_z)>3.29]
-      outliers2 = base::names(group2_z)[base::abs(group2_z)>3.29]
+      outliers1 = base::names(na.omit(group1_z))[base::abs(na.omit(group1_z))>3.29]
+      outliers2 = base::names(na.omit(group2_z))[base::abs(na.omit(group2_z))>3.29]
       outliers = c(outliers1, outliers2)
       
+      #outliers_df$outliers[i] = paste(outlier, collapse = ",")
       #Set outliers to NA in the data_table
       data_table[rownames(data_table) %in% outliers, i] = NA
       
@@ -345,6 +344,14 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
         p.val = stats::t.test(data_table[,i]~grouping, var.equal=T)$p.value
       }
     }
+      
+     #Alternatively, perform a permutation test
+      
+      if (test == "permutation-test"){
+          
+          perm_test = coin::independence_test(data_table[,i]~grouping)
+          p.val = coin::pvalue(perm_test)
+      }
     
     #Create the plot if the p-value is lower than the threshold
     if(p.val <=threshold){
@@ -421,6 +428,7 @@ pairwiseComparisons <- function(data_table, labels, file, format = "pdf",
   if(format == "pptx"){
     print(doc, target = file) 
   }else(dev.off())
+
 }
 
 ## Boxplot Example ####
@@ -431,6 +439,10 @@ pairwiseComparisons.example <- function(data_table, labels, file, format = "pdf"
                                 subset = NULL,
                                 animal_label = FALSE){
 
+    
+
+    
+    
   #Perform the analysis only for a subset of variables 
   if(!is.null(subset)){
     data_table = data_table[,subset]
@@ -455,8 +467,8 @@ pairwiseComparisons.example <- function(data_table, labels, file, format = "pdf"
       group2_z = (group2 - base::mean(stats::na.omit(group2)))/stats::sd(stats::na.omit(group2))
       
       #get potential outliers
-      outliers1 = base::names(group1_z)[base::abs(group1_z)>3.29]
-      outliers2 = base::names(group2_z)[base::abs(group2_z)>3.29]
+      outliers1 = base::names(na.omit(group1_z))[base::abs(na.omit(group1_z))>3.29]
+      outliers2 = base::names(na.omit(group2_z))[base::abs(na.omit(group2_z))>3.29]
       outliers = c(outliers1, outliers2)
       
       #Set outliers to NA in the data_table
@@ -482,6 +494,14 @@ pairwiseComparisons.example <- function(data_table, labels, file, format = "pdf"
         p.val = stats::t.test(data_table[,i]~grouping, var.equal=T)$p.value
       }
     }
+      
+      #Alternatively, perform a permutation test
+      
+      if (test == "permutation-test"){
+          
+          perm_test = coin::independence_test(data_table[,i]~grouping)
+          p.val = coin::pvalue(perm_test)
+      }
     
     #Create the plot if the p-value is lower than the threshold
     if(p.val <=threshold){
@@ -568,7 +588,7 @@ createHeatmap <- function(data_table, file, scale = TRUE, cluster_cols = FALSE,
     data_table = base::as.data.frame(base::scale(data_table))
     
     #Create color code centered around 0
-    max.val = max(abs(data_table))
+    max.val = max(abs(na.omit(data_table)))
     
     cols = grDevices::hcl.colors(n = 20, palette = palette)
     
@@ -676,7 +696,7 @@ createHeatmap.example <- function(data_table, file, scale = TRUE, cluster_cols =
     data_table = base::as.data.frame(base::scale(data_table))
     
     #Create color code centered around 0
-    max.val = max(abs(data_table))
+    max.val = max(abs(na.omit(data_table)))
     
     cols = grDevices::hcl.colors(n = 20, palette = palette)
     
@@ -810,12 +830,14 @@ pcaAnalysis <- function(data_table, file, grouping = NULL, color_groups = NULL,
     
     missing_data = missing_data/nrow(data_table)
     
-    #Get indices of columns that contain more than 50% missing values
+    #Get indices of columns that contain more than 40% missing values
     ind = which(missing_data >= 0.4)
     
     #Drop the columns from the input
     
-    data_table = data_table[,-ind]
+    if (length(ind>0)){
+        data_table = data_table[,-ind] 
+    }
     
     
     #Check if there are enough variables
@@ -913,13 +935,14 @@ pcaAnalysis.example <- function(data_table, file, grouping = NULL, color_groups 
     
     missing_data = missing_data/nrow(data_table)
     
-    #Get indices of columns that contain more than 50% missing values
+    #Get indices of columns that contain more than 40% missing values
     ind = which(missing_data >= 0.4)
     
     #Drop the columns from the input
     
-    data_table = data_table[,-ind]
-    
+    if (length(ind>0)){
+        data_table = data_table[,-ind] 
+    }
     
     #Check if there are enough variables
     
@@ -978,49 +1001,92 @@ pcaAnalysis.example <- function(data_table, file, grouping = NULL, color_groups 
 #ARGUMENTS
 #data_table - the input data frame 
 #file - the output directory and file name to save the output visualizing the clustering
-#algorithm = "GMM" - per default, Gaussian mixture model clustering is performed, the user can also select "kmeans" 
+#algorithm = "GMM" - per default, Gaussian mixture model clustering is performed, the user can also select "kmeans" and "hierarchical" 
 #n_clusters = 2, per default, at least 2 clusters are produced, the user can specify a higher number of clusters desired
 #color_groups = NULL - an optional argument to specify the colors for the produced clusters
 #animal_label - an argument set to FALSE, if TRUE, animal labels are shown next to the data points
-#meta_data - the table containing the meta data - used to extract the animal IDs
+#labels- the table containing the description of column names used for axis labeling
+#estimate_n_clusters - an argument determining if the number of clusters should be 
+#estimated from the data
 
 clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=2,
                                color_groups = NULL, animal_label  =FALSE,
-                               meta_data){
+                               labels, estimate_n_clusters = FALSE){
   
-  #Convert to a data frame if only one varible is selected
-  data_table = data.frame(data_table)
-  animal = meta_data$animal
   #Perform Gaussian mixture model clustering per default
   
   if(algorithm == "GMM"){
+      
+      if (estimate_n_clusters == TRUE){
+          clustering_alt = mclust::clustCombi(data = data_table)
+          clustering = mclust::clustCombiOptim(clustering_alt)
+          clusters = clustering$cluster.combi
+      }else{
+          
+          clustering = mclust::Mclust(data_table, G = n_clusters)
+          
+          clusters = clustering$classification
+          
+      }
     
-    clustering = mclust::Mclust(data_table, G = n_clusters)
-    
-    clusters = clustering$classification
-  }else{
-    
-    clustering = stats::kmeans(x = data_table, centers = n_clusters)
-    
-    clusters = clustering$cluster
   }
+    if (algorithm == "kmeans"){
+        
+        if (estimate_n_clusters == TRUE){
+            nbclust = NbClust::NbClust(data_table, method = "kmeans", max.nc=5)
+            
+            n_clusters = max(BiocGenerics::unlist(nbclust[4]))
+            
+            clustering = stats::kmeans(x = data_table, centers = n_clusters)
+            
+            clusters = clustering$cluster
+        }else{
+            clustering = stats::kmeans(x = data_table, centers = n_clusters)
+            
+            clusters = clustering$cluster
+        }
+    }
+    
+    if (algorithm == "hierarchical"){
+        
+        if(estimate_n_clusters == TRUE){
+            nbclust = NbClust::NbClust(data_table, method = "complete", max.nc=5)
+            
+            n_clusters = max(BiocGenerics::unlist(nbclust[4]))
+            
+            clustering = stats::hclust(stats::dist(data_table))
+            
+            clusters = factor(stats::cutree(clustering, n_clusters))
+            
+        }else{
+            
+            clustering = stats::hclust(stats::dist(data_table))
+            
+            clusters = factor(stats::cutree(clustering, n_clusters))
+            
+        }
+        
+    }
   
   
   #Create plots with the clustering results. 
   
   #Option 1 - only one variable was provided for clustering
   
-  if(ncol(data_table) == 1){
+  if(ncol(data_table)==1){
     
-    colnames(data_table) = "InputVar"
+     #Extract the column name description for axis labeling
+      ylab = paste(labels$label1[1], 
+                   labels$label2[1], sep ="\n")
     
-    p =  ggplot2::ggplot(data_table, aes(y = InputVar, x  =factor(1), color = factor(clusters))) + 
+    
+    p =  ggplot2::ggplot(data_table, aes(y = data_table[,1], x  =factor(1), color = factor(clusters))) + 
       ggplot2::geom_point(size = 2.5) +
       ggplot2::theme_test(base_size = 14) +
       ggplot2::theme(axis.text.y = ggplot2::element_text(color  ="black"),
                      axis.text.x = ggplot2::element_blank(),
                      axis.ticks.x = ggplot2::element_blank()) +
-      ggplot2::labs(x = "", color = "cluster")
+      ggplot2::labs(x = "", color = "cluster", y = ylab)
     
     
     #Add custom colors if provided by the user
@@ -1033,12 +1099,16 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
     
     #Add animal labels if requested
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black")
     }
     
     #Define height and width for the plot
-    h = 3
-    w = 4
+    h = 5
+    w = 5
     
   }
   
@@ -1046,12 +1116,19 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
   
   if(ncol(data_table) == 2){
     
+      #Extract the column name description for axis labeling
+      xlab = paste(labels$label1[1], 
+                   labels$label2[1], sep ="\n")
+      
+      ylab = paste(labels$label1[2], 
+                   labels$label2[2], sep ="\n")
+      
     p =  ggplot2::ggplot(data_table, aes(x = data_table[,1] , y  = data_table[,2], 
                                          color = factor(clusters))) + 
       ggplot2::geom_point(size = 2.5) +
       ggplot2::theme_test(base_size = 14) +
       ggplot2::theme(axis.text = ggplot2::element_text(color  ="black")) +
-      ggplot2::labs(color = "cluster", x  ="InputVar 1", y  = "InputVar 2") +
+      ggplot2::labs(color = "cluster", x  =xlab, y  = ylab) +
       ggplot2::stat_ellipse()
     
     
@@ -1064,7 +1141,11 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
     
     #Add animal labels if requested
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black", position = position_jitter(seed = 1))
     }
     
     
@@ -1105,8 +1186,11 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
     #Add animal labels if true
     
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, 
-                                        max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black", position = position_jitter(seed = 1))
     }
     
     h = 4
@@ -1124,40 +1208,86 @@ clusteringAnalysis <- function(data_table, file, algorithm  = "GMM", n_clusters=
 
 clusteringAnalysis.example <- function(data_table, file, algorithm  = "GMM", n_clusters=2,
                                color_groups = NULL, animal_label  =FALSE,
-                               meta_data){
-  #Convert to a data frame if only one variable is selected
-  data_table = data.frame(data_table)
-  animal = meta_data$animal
+                               labels, estimate_n_clusters = FALSE){
+
   #Perform Gaussian mixture model clustering per default
   
   if(algorithm == "GMM"){
+      
+      if (estimate_n_clusters == TRUE){
+        clustering_alt = mclust::clustCombi(data = data_table)
+        clustering = mclust::clustCombiOptim(clustering_alt)
+        clusters = clustering$cluster.combi
+     }else{
+      
+      clustering = mclust::Mclust(data_table, G = n_clusters)
+      
+      clusters = clustering$classification
+      
+     }
+    }
     
-    clustering = mclust::Mclust(data_table, G = n_clusters)
+    if (algorithm == "kmeans"){
+        
+        if (estimate_n_clusters == TRUE){
+            nbclust = NbClust::NbClust(data_table, method = "kmeans", max.nc=5)
+            
+            n_clusters = max(BiocGenerics::unlist(nbclust[4]))
+            
+            clustering = stats::kmeans(x = data_table, centers = n_clusters)
+            
+            clusters = clustering$cluster
+        }else{
+            clustering = stats::kmeans(x = data_table, centers = n_clusters)
+            
+            clusters = clustering$cluster
+        }
+    }
     
-    clusters = clustering$classification
-  }else{
+    if (algorithm == "hierarchical"){
+        
+        if(estimate_n_clusters == TRUE){
+            nbclust = NbClust::NbClust(data_table, method = "complete", max.nc=5)
+            
+            n_clusters = max(BiocGenerics::unlist(nbclust[4]))
+            
+            clustering = stats::hclust(stats::dist(data_table))
+            
+            clusters = factor(stats::cutree(clustering, n_clusters))
+            
+        }else{
+            
+            clustering = stats::hclust(stats::dist(data_table))
+            
+            clusters = factor(stats::cutree(clustering, n_clusters))
+            
+        }
+        
+    }
     
-    clustering = stats::kmeans(x = data_table, centers = n_clusters)
-    
-    clusters = clustering$cluster
-  }
   
   
   #Create plots with the clustering results. 
   
   #Option 1 - only one variable was provided for clustering
   
-  if(ncol(data_table) == 1){
+  if(ncol(data_table)==1){
     
-    colnames(data_table) = "InputVar"
+      #Extract the column name description for axis labeling
+      ylab = paste(labels$label1[1], 
+                   labels$label2[1], sep ="\n")
+      
+      
+      data_table = data.frame(data_table)
+      colnames(data_table) = labels$colnames[1]
     
-    p =  ggplot2::ggplot(data_table, aes(y = InputVar, x  =factor(1), color = factor(clusters))) + 
+    p =  ggplot2::ggplot(data_table, aes(y = data_table[,1], x  =factor(1), color = factor(clusters))) + 
       ggplot2::geom_point(size = 2.5) +
       ggplot2::theme_test(base_size = 14) +
       ggplot2::theme(axis.text.y = ggplot2::element_text(color  ="black"),
                      axis.text.x = ggplot2::element_blank(),
                      axis.ticks.x = ggplot2::element_blank()) +
-      ggplot2::labs(x = "", color = "cluster")
+      ggplot2::labs(x = "", color = "cluster", y = ylab)
     
     
     #Add custom colors if provided by the user
@@ -1170,25 +1300,33 @@ clusteringAnalysis.example <- function(data_table, file, algorithm  = "GMM", n_c
     
     #Add animal labels if requested
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black")
     }
     
-    #Define height and width for the plot
-    h = 3
-    w = 4
-    
+ 
   }
   
   #Option 2 - if two variables are provided for clustering, create a scatter plot with them
   
   if(ncol(data_table) == 2){
+      
+      #Extract the column name description for axis labeling
+       xlab = paste(labels$label1[1], 
+                     labels$label2[1], sep ="\n")
+       
+       ylab = paste(labels$label1[2], 
+                    labels$label2[2], sep ="\n")
     
     p =  ggplot2::ggplot(data_table, aes(x = data_table[,1] , y  = data_table[,2], 
                                          color = factor(clusters))) + 
       ggplot2::geom_point(size = 2.5) +
       ggplot2::theme_test(base_size = 14) +
       ggplot2::theme(axis.text = ggplot2::element_text(color  ="black")) +
-      ggplot2::labs(color = "cluster", x  ="InputVar 1", y  = "InputVar 2") +
+      ggplot2::labs(color = "cluster", x  =xlab, y  = ylab) +
       ggplot2::stat_ellipse()
     
     
@@ -1201,13 +1339,12 @@ clusteringAnalysis.example <- function(data_table, file, algorithm  = "GMM", n_c
     
     #Add animal labels if requested
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black", position = position_jitter(seed = 1))
     }
-    
-    
-    #Define height and width for the plot
-    h = 4
-    w = 5
     
   }
   
@@ -1242,12 +1379,12 @@ clusteringAnalysis.example <- function(data_table, file, algorithm  = "GMM", n_c
     #Add animal labels if true
     
     if(animal_label == TRUE){
-      p =  p + ggrepel::geom_text_repel(aes(label= animal), min.segment.length = 0, 
-                                        max.overlaps = Inf, size=2)
+        lab = rownames(data_table)
+        
+        p = p + ggrepel::geom_text_repel(aes(label = lab), max.overlaps = Inf, size=2,
+                                         min.segment.length = 0, show.legend = F,
+                                         col = "black", position = position_jitter(seed = 1))
     }
-    
-    h = 4
-    w = 5
     
   }
   return(p)
