@@ -1,0 +1,35 @@
+---
+title: "Correlation matrix analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  dim: 0
+  corrtype: "Pearson"
+  pval: 0.05
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+Your input matrix contained ``r params$dim`` variables.\
+Pairwise correlations correspond to the ``r params$corrtype`` correlation coefficient.\
+Only correlations with a p-value < ``r params$pval`` are shown on the matrix. \
+P-values are not corrected for multiple comparisons.
+
+### Session info
+This analysis was performed with beeRapp's 'Correlation Matrix' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("Hmisc", packageVersion("Hmisc")),
+paste("corrplot", packageVersion("corrplot")))
+print(info)
+```
+
+
+
