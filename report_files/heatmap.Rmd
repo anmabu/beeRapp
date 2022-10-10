@@ -1,0 +1,53 @@
+---
+title: "Heatmap analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  dim: 0
+  cluster_cols: TRUE
+  cluster_rows: TRUE
+  scaling: TRUE
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+Your input matrix contained ``r params$dim`` variables.\
+
+```{r echo=FALSE, results='asis'}
+
+if(params$scaling ==  TRUE){
+  cat("Your analysis was performed on the mean centered and scaled input matrix. This means that each variable was scaled to have a mean of 0 and a standard deviation of 1.")  
+}else{
+    cat("No scaling of input variables was performed. Variables are shown on the
+        original scale on the heatmap")
+}
+
+```
+
+```{r echo=FALSE, results='asis'}
+
+if(params$cluster_cols ==  TRUE | params$cluster_rows == TRUE){
+  cat("Columns/rows were clustered using a hierarchical clustering algorithm with
+      an Euclidean distance and complete linkage.")  
+}
+
+```
+
+
+### Session info
+This analysis was performed with beeRapp's 'Heatmap' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("pheatmap", packageVersion("pheatmap")))
+print(info)
+```
+
+
+
