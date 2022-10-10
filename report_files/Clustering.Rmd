@@ -1,0 +1,129 @@
+---
+title: "Clustering analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params: 
+  data_table: NULL
+  algorithm: "GMM"
+  n_clusters: 2
+  estimate_n_clusters: FALSE
+  labels: NULL
+  
+
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Analysis summary
+
+The following variables were included in the clustering analysis:
+
+```{r, echo = FALSE, results='asis'}
+df = data.frame(variable  = paste(labels[,1], labels[,2]))
+datatable(df)
+
+```
+
+
+```{r, echo = FALSE, results='asis'}
+if(params$algorithm == "GMM"){
+    cat("Clustering was performed using Gaussian mixture model as implemented in the mclust package.", '  \n', '  \n')
+}
+
+if(params$algorithm == "kmeans"){
+    cat("Clustering was performed using k-means as implemented in the stats package.", '  \n', '  \n')
+}
+
+if(params$algorithm == "hierarchical"){
+    cat("Clustering was performed using hierarchical clustering with Euclidean distance and complete linkage as implemented in the stats package. Clusters were then obtained with the cutree function.", '  \n', '  \n')
+}
+
+
+if(params$estimate_n_clusters == FALSE){
+    cat("The number of clusters was set to ", params$n_clusters, "." , '  \n', '  \n')
+}
+if((params$estimate_n_clusters == TRUE)){
+    if (params$algorithm == "GMM"){
+        cat("The number of clusters was automatically determined using the clustCombi functon from the mclust package.", '  \n', '  \n')
+    }
+    
+     if (params$algorithm == "kmeans"){
+        cat("The number of clusters was automatically determined with the NbClust package using a Euclidean distance and the k-means method. All measures included in NbClust were calculated and a majority vote was taken for the final number of clusters.", '  \n', '  \n')
+     }
+         if (params$algorithm == "hierarchical"){
+        cat("The number of clusters was automatically determined with the NbClust package using a Euclidean distance and the complete linkage method. All measures included in NbClust were calculated and a majority vote was taken for the final number of clusters.", '  \n', '  \n')
+    }
+}
+
+
+if(any(is.na(params$data_table))){
+    
+    cat('####', 'Missing values', '  \n', '  \n')
+    cat("The following variables used for clustering contained missing values.
+        Missing values were imputed using 5 multiple imputations with predictive
+        mean matching as implemented in the aregImpute function from the Hmisc package.")
+    
+    ind = vector()
+
+    for (i in 1:ncol(params$data_table)){
+        if(any(is.na(params$data_table[,i]))){
+            ind = c(ind, i)
+        }
+    }
+
+    df = data.frame(variable  = paste(labels[ind,1], labels[ind,2]))
+    datatable(df)
+}
+
+
+
+```
+
+### Session info
+This analysis was performed with beeRapp's 'Clustering' module. \
+The following R version and packages were used for the analysis.
+
+```{r, echo = FALSE}
+
+if(params$algorithm == "GMM"){
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("ggplot2", packageVersion("ggplot2")),
+paste("mclust", packageVersion("mclust")))
+
+    if(any(is.na(data_table))){
+        info = c(info, paste("Hmisc", packageVersion("Hmisc")))
+    }
+    
+    print(info)
+}
+
+if(params$algorithm %in%  c("kmeans", "hierarchical") & estimate_n_clusters == FALSE){
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("ggplot2", packageVersion("ggplot2")),
+paste("stats", packageVersion("stats")))
+    
+        if(any(is.na(data_table))){
+        info = c(info, paste("Hmisc", packageVersion("Hmisc")))
+    }
+    print(info)
+}
+
+if(params$algorithm %in%  c("kmeans", "hierarchical") & estimate_n_clusters == TRUE){
+    info = c(paste ("R", paste0(R.Version()[c("major","minor")], collapse = ".")),
+paste("ggplot2", packageVersion("ggplot2")),
+paste("stats", packageVersion("stats")),
+paste("NbClust", packageVersion("NbClust")))
+    
+        if(any(is.na(data_table))){
+        info = c(info, paste("Hmisc", packageVersion("Hmisc")))
+    }
+     print(info)
+}
+
+```
+
+
+
