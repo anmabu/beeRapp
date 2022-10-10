@@ -62,7 +62,8 @@ ui <- fluidPage(
                          shiny::p(strong("labels"), " contains three columns: 'label1', 'label2' and 'colnames'. 'colnames' corresponds to the column 
                                   names of the variables in", strong("grand_table"), " . The 'label1' and 'label2' columns provided a more detailed description of the measured variables
                                   that are also used in data processing and axis labeling on the generated plots. All three columns must be present in the table and column names must 
-                                  match between the", strong("labels"), " and ",  strong("grand_table"), " tables. If the description of the measured variable is not long enough, leave out the cell in 'label1' or 'label2' empty."),
+                                  match between the", strong("labels"), " and ",  strong("grand_table"), " tables. The value in the 'label1' column corresponds to the first line of text that will be displayed on the axis labels of boxplots and correlation plots, 'label2 
+                                  corresponds to the second line. Either of these values can be left empty if the variable description is not long and would fit on a single line on the plot axis."),
                          shiny::p(strong("meta_data"), " contains further information on the the tested subjects. The first column contains the animal IDs which must match the IDs in ",
                                   strong("grand_table"), " . The remaining columns contain information such as group assignment, genotype, treatment, etc. Such grouping factors can be used for statistical comparisons or group annotation on the resulting plots."),
                          # br(),
@@ -90,20 +91,32 @@ ui <- fluidPage(
         tabItem(tabName = "clustering", 
                 fluidRow(column(12,
                                 box(
-                                  div(style = "display:inline-block", actionButton("clusteringselectall", "Select All")), 
-                                  div(style = "display:inline-block", actionButton("clusteringselectnone", "Select None")),
+                                  div(style = "display:inline-block", actionButton("clusteringselectall", "Select all")), 
+                                  div(style = "display:inline-block", actionButton("clusteringselectnone", "Select none")),
                                   div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabelsclustering")), 
                                   title = "Select Variables", width = 12, solidHeader = T, status = "primary", collapsible = T, collapsed = F)
                 )
                 ),
                 fluidRow(column(12,
                                 box(
-                                  selectInput("algorithmclustering", "Clustering Algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans"), selected = "GMM", width = "400px"),
-                                  numericInput("numclusters", "Clusters", value = 2, min = 1, width = "400px"), 
-                                  div(style = "display: block", downloadButton("clustering.save", "Save Clustering")),
-                                  helpText("Note: Saves clustering to metadata table and downloads the updated xlsx file."),
-                                  title = "Clustering Settings", width = 12, solidHeader = T, status = "primary")
+                                  selectInput("algorithmclustering", "Clustering algorithm", choices = c("Gaussian Mixture Model" = "GMM", "k-means" = "kmeans", "hierarchical" = "hierarchical"), selected = "GMM", width = "400px"),
+                                  div(style = "display: inline-block; vertical-align:top" , numericInput("numclusters", "Select number of clusters", value = 2, min = 1, width = "400px"),), 
+                                  div(style="display: inline-block;vertical-align:top; width: 50px;", HTML("<br>")),
+                                  div(style="display: inline-block;vertical-align:middle; width: 50px;", HTML("or")),
+                                  div(style="display: inline-block;vertical-align:top; width: 50px;", HTML("<br>")),
+                                  div(style = "display: inline-block; vertical-align:top", radioButtons("determineClusters", "Determine number of clusters automatically", choiceNames = c("yes", "no"), choiceValues = c(T, F), selected = F)),
+                                  title = "Clustering settings", width = 12, solidHeader = T, status = "primary",
+                                  
+                                  fluidRow(column(12,
+                                                  div(style = "display: inline-block", downloadButton("clustering.save", "Save clustering")),
+                                                  div(style="display: inline-block; width:500px;"),
+                                                  div(style = "display: inline-block", downloadButton("clusteringReport", "Download analysis report")),
+                                                  helpText("Save clustering to metadata table and download the updated xlsx file.")
+                                  )
+                                  )
                 )
+                ),
+    
                 ),
                 fluidRow(column(6, 
                                 box(
@@ -120,7 +133,7 @@ ui <- fluidPage(
                                  column(6, 
                                    radioButtons("colorselect.clustering", "Select custom colors", choices = c("Yes" = F, "No" = T), selected = T)
                                   ),
-                                 title = "Plot Settings", width = 12, solidHeader = T, status = "primary"),
+                                 title = "Plot settings", width = 12, solidHeader = T, status = "primary"),
                         uiOutput("colorpicker.clustering")
                         ),
                 )
@@ -130,12 +143,14 @@ ui <- fluidPage(
                 fluidRow(
                   column(12,
                          box(
-                           selectInput("comptype", "Select Comparison Type", choices = c("wilcoxon", "t-test"), width = "400px"),
-                           numericInput("compthresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
+                           selectInput("comptype", "Select statistical test", choices = c("wilcoxon", "t-test","permutation-test"), width = "400px"),
+                           numericInput("compthresholdvalue", "Choose p-value cutoff", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width = "400px"),
                            downloadButton("downboxplots", "Download"),
                            div(style= "display:inline-block", radioButtons("downboxformat", "", inline = TRUE, 
                                                                            choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperatly as .pdf)"), 
                                                                            choiceValues = c("pdf", "pptx", "zip"))), 
+                           div(style="display: inline-block; width: 250px;"),
+                           div(style = "display: inline-block", downloadButton("boxplotReport", "Download analysis report")),
                            title = "Boxplots Settings", width = 12, solidHeader = T, collapsible = F, status = "primary" 
                          )
                   )
@@ -195,9 +210,11 @@ ui <- fluidPage(
                            column(2, radioButtons("scaled.button", "Scale Values?", choiceNames = c("Yes", "No"), choiceValues = c(T, F), selected = T)),
                            column(2, radioButtons("grouping.button", "Grouping?", choices = c("Yes" = T, "No" = F), selected = F)),
                            fluidRow(
-                             column(12, 
-                                    div(style = "display:inline-block", downloadButton("downheatmap", "Download")),
-                                    div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))))
+                             column(12,
+                                    div(style = "display:inline-block", downloadButton("downheatmap", "Download heatmap")),
+                                    div(style = "display:inline-block", radioButtons("visualbutton", "", choices = ("pdf"))),
+                                    div(style="display: inline-block; width: 250px;"),
+                                    div(style = "display:inline-block", downloadButton("downHeatmapReport", "Download analysis report")))
                            ),
                            title = "Heatmap Settings", width = 12, solidHeader = T, status = "primary"      
                          )
@@ -229,6 +246,8 @@ ui <- fluidPage(
                                   column(12, 
                                          div(style = "display:inline-block", downloadButton("down_pca")),
                                          div(style = "display:inline-block", radioButtons("pca_down.type", NULL, choices = c(".pdf"))),
+                                         div(style="display: inline-block; width: 250px;"),
+                                         div(style = "display: inline-block", downloadButton("pcaReport", "Download analysis report")),
                                          style = "margin-left: -15px"),
                                   title = "PCA Settings", width = 12, solidHeader = T, status = "primary"
                                 )
@@ -243,23 +262,34 @@ ui <- fluidPage(
         ## Correlation Matrix ####
         tabItem(tabName = "correlationmatrices", 
           fluidRow(
-            column(12, 
+            column(6, 
                 box(
                   div(style = "display:inline-block", actionButton("corrselectall", "Select All")), 
                   div(style = "display:inline-block", actionButton("corrselectnone", "Select None")),
                   div(style = "height:300px;overflow-y:scroll;width:100%", uiOutput("selectlabels")), 
-                  title = "Select Variables", width = 12, collapsible = T, 
+                  title = "Select variables", width = 12, collapsible = T, 
                       solidHeader = T, status = "primary"
                 )
-            )
+            ),
+            column(6,
+                   box(
+                       selectInput("cormatcorrtype", "Select correlation type", choices = c("pearson", "spearman"), width = "400px"),
+                       numericInput("cormatthresholdvalue", "Choose p-value cutoff", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width="400px"),
+                       selectInput("cormatcolor", "Select Color Palette", choices = c("PiYG", "PRGn", "PuOr", "RdBu", "BrBG", "RdYlBu"), selected = "RdBu", width = "400px"),
+                       downloadButton("downloadCorrmatReport", "Download analysis report"),
+                       title = "Correlation matrix settings", width = 12, collapsible = T,
+                       solidHeader = T, status  = "primary"
+                   )
+            ),
           ),
+          
           fluidRow(
             column(12, 
               box(
                  div(style = "display:inline-block", downloadButton("downloadcorr", "Download")),
                  div(style= "display:inline-block", radioButtons("dfcorrmatrix", "", c(".pdf"))),
                  plotOutput("cormat", height=800), 
-                 title = "Correlation Matrix", width = 12, collapsible = F, 
+                 title = "Correlation matrix", width = 12, collapsible = F, 
                  solidHeader = T, status = "primary"
               )
             )
@@ -271,11 +301,13 @@ ui <- fluidPage(
             column(12, 
                 box(
                   selectInput("corrtype", "Select Correlation Type", choices = c("pearson", "spearman", "kendall"), width = "400px"),# , "spearman", "kendall")),
-                  numericInput("thresholdvalue", "Choose cutoff p-value", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width="400px"),
+                  numericInput("thresholdvalue", "Choose p-value cutoff", min = 0.001, max = 0.5, value = 0.05, step = 0.001, width="400px"),
                   downloadButton("downpaircorr", "Download"),
                   div(style= "display:inline-block", radioButtons("dfpairmatrix", "", inline = TRUE, 
                               choiceNames = c(".pdf (All plots)", ".pptx (All plots)", ".zip (Each plot seperately as .pdf)"), 
-                              choiceValues = c("pdf", "pptx", "zip"))), 
+                              choiceValues = c("pdf", "pptx", "zip"))),
+                  div(style="display: inline-block; width: 250px;"),
+                  div(style = "display:inline-block", downloadButton("downPairCorrReport", "Download analysis report")),
                   title  = "Pairwise Correlations Settings", width = 12, collapsible = F, solidHeader = T, status = "primary"
                 )
             )
@@ -463,7 +495,11 @@ server <- function(input, output, session) {
     ### Example Correlation Matrix ####
     output$cormat <- renderPlot({
       plotvalues <- c(paste0(req(input$selection)))
-      correlationMatrix(inputdata(), subset = plotvalues, outDir = NULL, filename = NULL)
+      threshold <- input$cormatthresholdvalue
+      color_palette <- input$cormatcolor
+      type <- input$cormatcorrtype
+      correlationMatrix(inputdata(), subset = plotvalues, type = type, threshold = threshold,
+                        color_palette = color_palette)
       })
     
 
@@ -472,11 +508,37 @@ server <- function(input, output, session) {
         filename <- ("cormat.pdf"), 
         content <- function(file) { 
             plotvalues <- c(paste0(input$selection))
+            threshold <- input$cormatthresholdvalue
+            color_palette <- input$cormatcolor
+            type <- input$cormatcorrtype
             pdf(file, height = 10, width = 11, paper = "a4")
-            corrmatrix <- correlationMatrix(inputdata(), subset = plotvalues, outDir = NULL, filename = NULL)
+            corrmatrix <- correlationMatrix(inputdata(), subset = plotvalues,
+                                            type = type, threshold = threshold,
+                                            color_palette = color_palette)
             dev.off()
             } 
         )
+    
+    ### Download Correlation matrix analysis report ###
+    output$downloadCorrmatReport <- downloadHandler( 
+        filename <- ("Corrlation_Matrix_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "corrmat.Rmd")
+            file.copy("report_files/corrmat.Rmd", tempReport, overwrite = TRUE)
+            dim <- length(input$selection)
+            pval <- input$cormatthresholdvalue
+            corrtype = input$cormatcorrtype
+            
+            rmarkdown::render(input=tempReport,
+                          output_file= file, output_format = "html_document",
+                          params = list(dim = dim,  pval = pval, corrtype = corrtype))
+
+        } 
+    )
+    
+    ##############################################################
     ## Pairwise Correlation ####
     ### Example Plot Pairwise Correlation ####
     output$paircorrexample <- renderPlot({
@@ -584,6 +646,27 @@ server <- function(input, output, session) {
       }
     )
     
+    ### Download Pairwise correlations analysis report ###
+    output$downPairCorrReport <- downloadHandler( 
+        filename <- ("Pairwise_correlations_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "pairwiseCorr.Rmd")
+            file.copy("report_files/pairwiseCorr.Rmd", tempReport, overwrite = TRUE)
+            
+            pval <- input$thresholdvalue
+            corrtype = input$corrtype
+            
+            rmarkdown::render(input=tempReport,
+                              output_file= file, output_format = "html_document",
+                              params = list(pval = pval, corrtype = corrtype))
+            
+        } 
+    )
+    
+    ########################################################
+    
     ## Boxplots ####
     ### Example Plot Boxplots ####
     output$boxplotexample <- renderPlot({
@@ -606,8 +689,13 @@ server <- function(input, output, session) {
       comp <- req(input$comptype)
       if (comp == "wilcoxon"){ 
         comp = "wilcox"
-      } else { 
+      } 
+      if (comp == "t-test") { 
         comp = "t.test"
+      }
+      
+      if (comp == "permutation-test") { 
+          comp = "permutation-test"
       }
       return(comp)
     })
@@ -669,6 +757,33 @@ server <- function(input, output, session) {
       
     )
     
+    ### Download Pairwise comparisons report ###
+    output$boxplotReport <- downloadHandler( 
+        filename <- ("Pairwise_comparisons_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "boxplots.Rmd")
+            file.copy("report_files/boxplots.Rmd", tempReport, overwrite = TRUE)
+            
+            test = boxtesttype()
+            pval = input$compthresholdvalue
+            data_table <- inputdata()
+            labels <- labels()
+            grouping <- boxplotgroups()
+            outliers <- input$removeoutliers
+            
+            rmarkdown::render(input=tempReport,
+                              output_file= file, output_format = "html_document",
+                              params = list(test = test, grouping = grouping, 
+                                            pval = pval, outliers = outliers, 
+                                            data_table = data_table, 
+                                            labels=labels))
+            
+        } 
+    )
+ 
+    ########################################################################   
     ## Heatmap####
     # Reactives
     cols_cluster <- reactive({
@@ -801,6 +916,31 @@ server <- function(input, output, session) {
                       subset = subset, palette = palette)
       }
     )
+    
+    ### Download Heatmap analysis report ###
+    output$downHeatmapReport <- downloadHandler( 
+        filename <- ("Heatmap_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "heatmap.Rmd")
+            file.copy("report_files/heatmap.Rmd", tempReport, overwrite = TRUE)
+            
+            dim = length(input$selectionheatmap)
+            scaling <- eval(parse(text=input$scaled.button))
+            cluster_cols <- cols_cluster()
+            cluster_rows <- rows_cluster()
+            
+            rmarkdown::render(input=tempReport,
+                              output_file= file, output_format = "html_document",
+                              params = list(cluster_cols = cluster_cols,  
+                                            cluster_rows = cluster_rows, 
+                                            scaling = scaling, dim=dim))
+            
+        } 
+    )
+    
+    ###########################################################################
     ## Clustering ####
     ### Select Labels Clustering ####
     output$selectlabelsclustering <- renderUI({
@@ -859,20 +999,53 @@ server <- function(input, output, session) {
     output$exampleclustering <- renderPlot({
       req(inputdata())
       req(input$selectionclustering)
-      data_table <- inputdata()[input$selectionclustering]
+      
+      data_table <- inputdata()
+      #Impute missing values if any
+      
+      if(any(is.na(data_table))){
+          
+          #Edit column names to avoid getting errors with mice
+          #First add a "X" symbol in case that colnames start with a number
+          colnames(data_table) <- paste0("X", colnames(data_table))
+          
+          #Substitiute "-" symbol with "_"
+          colnames(data_table) <- gsub("-", "_", colnames(data_table))
+          
+          formula = as.formula(paste("~", paste(colnames(data_table),collapse = "+")))
+          
+          # Use imputation 
+          f = Hmisc::aregImpute(formula, nk=0,
+                          data=data_table) # normally B=75
+          
+          # Get the imputed values
+          imputed = Hmisc::impute.transcan(f, data=data_table, imputation=1, list.out=TRUE, 
+                                    pr=FALSE, check=FALSE)
+          
+          imputed.data = imputed.data[, colnames(data_table), drop = FALSE]
+          
+          data_table = imputed.data
+          
+          colnames(data_table) = labels()$colnames
+      }
+      
+      #Select subset for clustering
+      data_table <- data_table[input$selectionclustering]
       file <- NULL
       algorithm <- input$algorithmclustering
       n_clusters <- input$numclusters
       color_groups <- NULL 
       animal_label <- input$idclustering
-      meta_data <- metadata()
+      labels <- labels()
+      labels = labels[labels$colnames %in% colnames(data_table),]
+      estimate_n_clusters = input$determineClusters
       
       if (!as.logical(input$colorselect.clustering)) {
         color_groups <- unlist(clustering_groups_color())
       }
       
       clusteringAnalysis.example(data_table, file, algorithm, n_clusters,
-                         color_groups, animal_label, meta_data)
+                         color_groups, animal_label, labels, estimate_n_clusters)
     })
     
     ### Download Clustering ####
@@ -882,19 +1055,56 @@ server <- function(input, output, session) {
         (paste0(input$algorithmclustering, "_", input$numclusters, "_", "cluster.pdf"))
       }, 
       content <- function(file){
-        data_table <- inputdata()[input$selectionclustering]
+          
+         data_table <- inputdata()
+         
+
+         #Impute missing values if any
+         if(any(is.na(data_table))){
+             #Edit column names to avoid getting errors with mice
+             #First add a "X" symbol in case that colnames start with a number
+             colnames(data_table) <- paste0("X", colnames(data_table))
+             
+             #Substitiute "-" symbol with "_"
+             colnames(data_table) <- gsub("-", "_", colnames(data_table))
+             
+             formula = as.formula(paste("~", paste(colnames(data_table),collapse = "+")))
+             
+             # Use imputation 
+             f = Hmisc::aregImpute(formula, nk=0,
+                                   data=data_table) # normally B=75
+             
+             # Get the imputed values
+             imputed = Hmisc::impute.transcan(f, data=data_table, imputation=1, list.out=TRUE, 
+                                              pr=FALSE, check=FALSE)
+             
+             # convert the list to the database
+             imputed.data = as.data.frame(do.call(cbind,imputed))
+             
+             # arrange the columns accordingly
+             imputed.data = imputed.data[, colnames(data_table), drop = FALSE]
+             
+             data_table = imputed.data
+             
+             colnames(data_table) = labels()$colnames
+         }
+          
+         #Select subset for clustering
+        data_table <- data_table[input$selectionclustering]
         algorithm <- input$algorithmclustering
         n_clusters <- input$numclusters
         color_groups = NULL 
         animal_label <- input$idclustering
-        meta_data <- metadata()
+        labels <- labels()
+        labels = labels[labels$colnames %in% colnames(data_table),]
+        estimate_n_clusters = input$determineClusters
         
         if (!as.logical(input$colorselect.clustering)) {
           color_groups <- unlist(clustering_groups_color())
         }
         
         clusteringAnalysis(data_table, file, algorithm, n_clusters,
-                           color_groups, animal_label, meta_data)
+                           color_groups, animal_label, labels,estimate_n_clusters)
       }  
     )
     
@@ -922,6 +1132,35 @@ server <- function(input, output, session) {
                             "meta_data" = data.frame("ID" = rownames(metadata()),metadata()))
         openxlsx::write.xlsx(sheet_names, file, rowNames = FALSE, colNames = TRUE)
       })
+    
+    ### Download Clustering report ###
+    output$clusteringReport <- downloadHandler( 
+        filename <- ("Clustering_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "Clustering.Rmd")
+            file.copy("report_files/Clustering.Rmd", tempReport, overwrite = TRUE)
+            
+            data_table <- inputdata()[input$selectionclustering]
+            algorithm <- input$algorithmclustering
+            n_clusters <- input$numclusters
+            estimate_n_clusters = input$determineClusters
+            labels = labels()
+            labels = labels[labels$colnames %in% colnames(data_table),]
+            
+            rmarkdown::render(input=tempReport,
+                              output_file= file, output_format = "html_document",
+                              params = list(data_table = data_table,
+                                            algorithm = algorithm,
+                                            n_clusters = n_clusters,
+                                            estimate_n_clusters=estimate_n_clusters, 
+                                            labels=labels))
+            
+        } 
+    )
+    
+    ###############################################################
     
     ## PCA ####
     
@@ -1012,6 +1251,27 @@ server <- function(input, output, session) {
         }
         pcaAnalysis(data_table, file, grouping, color_groups, animal_label)
       }  
+    )
+    
+    ### Download PCA analysis report ###
+    output$pcaReport<- downloadHandler( 
+        filename <- ("PCA_analysis_summary.html"), 
+        content <- function(file) { 
+            
+            #Copy report file to temp directory before processing
+            tempReport <- file.path(tempdir(), "PCA.Rmd")
+            file.copy("report_files/PCA.Rmd", tempReport, overwrite = TRUE)
+            
+            data_table <- inputdata()
+            if(any(is.na(data_table)) == TRUE){
+                missing_vals  =  TRUE
+            }else{missing_vals = FALSE}
+            
+            rmarkdown::render(input=tempReport,
+                              output_file= file, output_format = "html_document",
+                              params = list(missing_vals  = missing_vals))
+            
+        } 
     )
 }
 
