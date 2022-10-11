@@ -138,6 +138,12 @@ An important aspect of behavioral testing batteries is that there are oftern red
 
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195079315-285b4b8b-9f3c-4c1b-9c0b-dbdc29ade5f7.png">
 
+#### Pairwise correlations
+
+Beyond looking at the overall correlation structire, you might also be interested in more specific information about pairwise correlations between individual variables. beeRapp creates bivariate scatter plots for all combinations of variables in the data set for which the correlation coeffcient r is statistically significant (based on the user-defined threshold). There are three types of correlations that can be calculated - Pearson, Spearman and Kendall. The plots also show the trend line from a linear regression fit. Similarly to boxplots, plots can be exported as pdf or PowerPoint files. A progress bar indicate the progress of the analysis once you've clicked on _Download_. ATTENTION: there are n(n-1)/2 possible pairwise combinations, so for a data set with 100 variables, there a re aready 4950 possible pariwise correlations. Therefore, the analysis might take some time to finish! Our example data set contains  pairwise correlations with a p-values <0.05.
+
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195081624-3e0ee0df-cb24-419b-a9df-a18714e25963.png">
+
 ## Send feedback and report issues
 
 You can send your feedback or report issues directly to hristo.todorov@uni-mainz.de.
