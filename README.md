@@ -123,12 +123,13 @@ beeRapp offers a few analysis strategies to investigate the multivariate nature 
 
 We can also annotate the heatmap with a group assignment for each sample - in our case we have the control and fox urine groups but also the clustering results we obtained previously. Indeed, if we use the clustering assignment we obtained using a GMM, we will notice that both clusters are also separated on the heatmap indicating that GMM and hierarchical clustering produce similar results in this case.
 
-
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195076184-657a4ae4-9080-4f75-8359-b355f70a51ee.png">
 
 ### Explorative analysis - PCA
 
+Dimensionality reduction techniques are a relevant analysis approach in the context of multivariate data as they allow representation of high-dimensional sets in 2D space while simultaneously retaining important features of the data (e.g., directions of maximal vairance or Euclidean distance between input data points). The most common dimmensionality reduction technique which beeRapp also implements, is principal components analysis. We can use it to investigate if the data set contains multivariate outliers (which would appear as points far removed from the remaining data) or if different groups cluster together. In our example, control and fox urine groups overlap in their overall multivariate pattern, however the clusters obtainend with GMM corresponding to high and low freezers are clearly separated from each other.
 
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195077671-5921252e-a05a-48dc-b218-be2dd89526b6.png">
 
 
 ## Send feedback and report issues
