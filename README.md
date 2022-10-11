@@ -131,6 +131,13 @@ Dimensionality reduction techniques are a relevant analysis approach in the cont
 
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195077671-5921252e-a05a-48dc-b218-be2dd89526b6.png">
 
+### Correlational analysis
+
+An important aspect of behavioral testing batteries is that there are oftern redundant, meaning that blocks of variables are often highly correlated with each other (e.g. freezing and distance moved). Investigating the correlational structure of the data is used as an internal validity criterion of the testing battery. In this context, correlations between differnt behavioral domains (e.g. freezing and performance in the elevated plus maze (EPM) test) are of particular interest. beeRapp allows you to generate a correlation matrix including all variables or a subset of them (the matrix is uploaded interactively as you add or remove variables). You can also choose the type of correlation (Pearson or Spearman) and the statistical threshold (non-significant correlations are not shown on the plot).
+
+
+<img width="800" alt="image" src="[https://user-images.githubusercontent.com/73937893/195077671-5921252e-a05a-48dc-b218-be2dd89526b6.png](https://user-images.githubusercontent.com/73937893/195079315-285b4b8b-9f3c-4c1b-9c0b-dbdc29ade5f7.png)">
+
 
 ## Send feedback and report issues
 
