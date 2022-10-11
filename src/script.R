@@ -44,7 +44,7 @@ correlationMatrix <- function(data_table, type = "pearson",
     font_size = 1
   }
   
-  if(ncol(cormat_r) > 10 & ncol(cormat_r) < 50){
+  if(ncol(cormat_r) >= 10 & ncol(cormat_r) < 50){
     height = 7
     width = 8
     font_size = 0.8
