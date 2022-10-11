@@ -115,6 +115,21 @@ In our comparison of the control versus the fox urine group, 13 variables differ
 
 <img width="488" alt="image" src="https://user-images.githubusercontent.com/73937893/194927023-a964c463-b682-48a4-9aa3-4503e9242d03.png">
 
+### Explorative analysis - heatmap
+
+beeRapp offers a few analysis strategies to investigate the multivariate nature of behavioral data. To begin with, we can visualize the data matrix as a heatmap using the _pheatmap_ package. We can use hiearchical clustering to see which measurements or animals are more similar to each other. The radio buttons in the _Heatmap Settings_ panel control options for clustering rows and columns and showing the respective dendrograms. An important argument is the _scaling_ option. per default, each variable is scaled to 0 mean and a standard deviation of 1. This is recommended when the data set consists of a mixture of variables measured on different scales. If we do not scale such data, then patterns in the results might be dominated by variables measured on larger scales. However, if all variables are measured on the same scale (e.g., freezing time), the argument can be set to _no_. In our example, we prefer t scale the data as we have different measurements scales.
+
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195075358-b58a76c0-5223-4491-b8fe-2d2cb4d10f66.png">
+
+We can also annotate the heatmap with a group assignment for each sample - in our case we have the control and fox urine groups but also the clustering results we obtained previously. Indeed, if we use the clustering assignment we obtained using a GMM, we will notice that both clusters are also separated on the heatmap indicating that GMM and hierarchical clustering produce similar results in this case.
+
+
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/195076184-657a4ae4-9080-4f75-8359-b355f70a51ee.png">
+
+### Explorative analysis - PCA
+
+
+
 
 ## Send feedback and report issues
 
