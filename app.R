@@ -1127,9 +1127,9 @@ server <- function(input, output, session) {
         metadata(meta_data)
         req(infile <- input$upload)
         
-        sheet_names <- list("grand_table" = data.frame("ID" = rownames(inputdata()),inputdata()), 
+        sheet_names <- list("grand_table" = data.frame("ID" = rownames(inputdata()),inputdata(), check.names = FALSE), 
                             "labels" = labels(), 
-                            "meta_data" = data.frame("ID" = rownames(metadata()),metadata()))
+                            "meta_data" = data.frame("ID" = rownames(metadata()),metadata(), check.names = FALSE))
         openxlsx::write.xlsx(sheet_names, file, rowNames = FALSE, colNames = TRUE)
       })
     
