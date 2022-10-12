@@ -1120,6 +1120,39 @@ server <- function(input, output, session) {
         return(paste0(new_name, "_clustering_", input$algorithmclustering, "_", input$numclusters, ".xlsx"))
         },
       content <- function(file){
+        
+        data_table = inputdata()
+        
+        if(any(is.na(data_table))){
+            
+            #Edit column names to avoid getting errors with mice
+            #First add a "X" symbol in case that colnames start with a number
+            colnames(data_table) <- paste0("X", colnames(data_table))
+            
+            #Substitiute "-" symbol with "_"
+            colnames(data_table) <- gsub("-", "_", colnames(data_table))
+            
+            formula = as.formula(paste("~", paste(colnames(data_table),collapse = "+")))
+            
+            # Use imputation 
+            f = Hmisc::aregImpute(formula, nk=0,
+                                  data=data_table) # normally B=75
+            
+            # Get the imputed values
+            imputed = Hmisc::impute.transcan(f, data=data_table, imputation=1, list.out=TRUE, 
+                                             pr=FALSE, check=FALSE)
+            
+            # convert the list to the database
+            imputed.data = as.data.frame(do.call(cbind,imputed))
+            
+            # arrange the columns accordingly
+            imputed.data = imputed.data[, colnames(data_table), drop = FALSE]
+            
+            data_table = imputed.data
+            
+            colnames(data_table) = labels()$colnames
+        }
+          
         data_table <- inputdata()[input$selectionclustering]
         algorithm <- input$algorithmclustering
         n_clusters <- input$numclusters
