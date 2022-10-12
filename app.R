@@ -1022,6 +1022,10 @@ server <- function(input, output, session) {
           imputed = Hmisc::impute.transcan(f, data=data_table, imputation=1, list.out=TRUE, 
                                     pr=FALSE, check=FALSE)
           
+          # convert the list to the database
+          imputed.data = as.data.frame(do.call(cbind,imputed))
+          
+          # arrange the columns accordingly
           imputed.data = imputed.data[, colnames(data_table), drop = FALSE]
           
           data_table = imputed.data
