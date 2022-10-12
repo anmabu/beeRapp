@@ -1153,7 +1153,7 @@ server <- function(input, output, session) {
             colnames(data_table) = labels()$colnames
         }
           
-        data_table <- inputdata()[input$selectionclustering]
+        data_table <- data_table[input$selectionclustering]
         algorithm <- input$algorithmclustering
         n_clusters <- input$numclusters
         color_groups = NULL 
