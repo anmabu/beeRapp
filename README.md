@@ -1,20 +1,20 @@
 # beeRapp
 ## Welcome to beeRapp! 
 
-- [What is beeRapp](##What-is-beeRapp)
-- [Setup](##Setup)
-- [How to use beeRapp](##How-to-use-beeRapp)
-	- [Formatting the input data](###Formatting-the-input-data)
-	- [Starting the app and importing the data](###Starting-the-app-and-importing-the-data)
-	- [Clustering analysis](###Clustering-analysis)
-	- [Pairwise comparisons](###Pairwise-comparisons)
-	- [Explorative analysis - heatmap](###Explorative-analysis-heatmap)
-	- [Explorative analysis - PCA](###Explorative-analysis-pca)
-	- [Correlational analysis](###Correlational-analysis)
-	- [Pairwise correlations](####Pairwise-correlations)
-	- [Conclusion](###Conclusion)
+- [What is beeRapp?](#what-us-beeRapp)
+- [Setup](#setup)
+- [How to use beeRapp](#how-to-use-beerapp)
+  * [Formatting the input data](#formatting-the-input-data)
+  * [Starting the app and importing the data](#starting-the-app-and-importing-the-data)
+  * [Clustering analysis](#clustering-analysis)
+  * [Pairwise comparisons](#pairwise-comparisons)
+  * [Explorative analysis - heatmap](#explorative-analysis---heatmap)
+  * [Explorative analysis - PCA](#explorative-analysis---pca)
+  * [Correlational analysis](#correlational-analysis)
+    + [Pairwise correlations](#pairwise-correlations)
+  * [Conclusion](#conclusion)
+- [Send feedback and report issues](#send-feedback-and-report-issues)
 
-- [Send feedback and report issues](##Send-feedback-and-report-issues)
 
 ### What is beeRapp?
 The BEhavioral Explorative analysis R shiny APP (beeRapp) is aimed at animal behavioral researchers without programming and data analysis background. The user-friendly app is designed to provide an easy access to fundamental analysis techniques such as clustering, boxplot visualization and pairwise comparisons, heatmaps, principal component analysis (PCA), correlation matrices and pairwise correlations. All results can be generated via the graphical user interface of the app and the user has the options to control settings such as color schemes or thresholds for statistical significance. Figures can be exported in .pdf or .pptx format.
