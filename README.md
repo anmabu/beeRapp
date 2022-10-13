@@ -1,7 +1,7 @@
 # beeRapp
 ## Welcome to beeRapp! 
 
-  *  [What is beeRapp?](#what-us-beeRapp)
+  * [What is beeRapp?](#what-is-beerapp-)
 - [Setup](#setup)
 - [How to use beeRapp](#how-to-use-beerapp)
   * [Formatting the input data](#formatting-the-input-data)
