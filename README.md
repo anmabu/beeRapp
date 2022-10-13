@@ -1,6 +1,6 @@
 # beeRapp
 ## Welcome to beeRapp! 
-
+ 
 - [What is beeRapp?](#what-is-beerapp-)
 - [Setup](#setup)
 - [How to use beeRapp](#how-to-use-beerapp)
@@ -87,7 +87,7 @@ We can then navigate to the _Import Data_ tab and use the _Browse_ button to fin
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/189502460-f59f7b3c-7831-443a-a73b-a7154ddf01b5.png">
 
 If the data is formatted correctly, the table will be imported and the grand table will be displayed in the app. We can now move on to some analyses.
-
+ 
 <img width="800" alt="image" src="https://user-images.githubusercontent.com/73937893/189502498-eb26be81-0bab-463b-a99d-a7a29c49e2a3.png">
 
 ### Clustering analysis
