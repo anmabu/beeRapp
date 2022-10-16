@@ -23,7 +23,7 @@ beeRapp is written in R. Feel free to contribute if it seems that something is m
 
 ## Setup
 
-Install R (we recommed at least version 4.1.3 or higher). 
+Install R (we recommed at least version 4.1.3 or higher, the minumum version  on which all depencencies can be installed without issues that we tested is 4.1.0). 
 
 Start R in your terminal or RStudio and run
 
