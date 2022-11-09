@@ -2,6 +2,7 @@
 ## Welcome to beeRapp! 
  
 - [Setup](#setup)
+- [Citation](#citation)
 - [How to use beeRapp](#how-to-use-beerapp)
   * [Formatting the input data](#formatting-the-input-data)
   * [Starting the app and importing the data](#starting-the-app-and-importing-the-data)
@@ -20,6 +21,15 @@ The BEhavioral Explorative analysis R shiny APP (beeRapp) is aimed at animal beh
 
 beeRapp is written in R. Feel free to contribute if it seems that something is missing!
 
+## Citation
+
+Please remember to cite beeRapp if you use it in your analysis.
+
+```
+Anne Marie Busch, Irina Kovlyagina, Beat Lutz, Hristo Todorov and Susanne Gerber.  
+beeRapp: An R Shiny App for automated high-throughput explorative analysis of multivariate behavioral data. 
+Bioinformatics Advances, vbac082, (2022)
+```
 
 ## Setup
 
