@@ -27,8 +27,9 @@ Please remember to cite beeRapp if you use it in your analysis.
 
 ```
 Anne Marie Busch, Irina Kovlyagina, Beat Lutz, Hristo Todorov and Susanne Gerber.  
-beeRapp: An R Shiny App for automated high-throughput explorative analysis of multivariate behavioral data. 
-Bioinformatics Advances, vbac082, (2022)
+beeRapp: An R Shiny App for automated high-throughput explorative analysis
+of multivariate behavioral data. 
+Bioinformatics Advances, vbac082, https://doi.org/10.1093/bioadv/vbac082 (2022).
 ```
 
 ## Setup
