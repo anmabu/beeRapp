@@ -989,7 +989,7 @@ server <- function(input, output, session) {
       req(input$choose_add_clustercolor)
       newVal <- input$choose_add_clustercolor
       updatedValues <- c(color_values, newVal)
-      color_values <<- updatedValues  #super-assign operator
+      color_values <- updatedValues  #super-assign operator
       for (i in 1:input$numclusters){
         updateRadioButtons(session, paste0("group_color_clustering.", i), choices = updatedValues)
       }
