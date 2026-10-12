@@ -1,0 +1,201 @@
+# beeRapp app-layer bundle builder for the ShinyApps store (Route A).
+# Place at  fentouxungui/beeRapp/.github/workflows/beerapp-build-app-bundle.yml
+#           on the DEFAULT branch = main.  No shell rebuild is required.
+#
+# Produces, per platform:  beerapp-<store-version>-<platform>.zip
+#   bundle/  +- manifest.json  +- app/app.R  +- app/src/**  +- app/report_files/**
+#            +- rlib/<Pkg>/   (prebuilt CRAN/Bioconductor binaries, R 4.6.1)
+#
+# Contract check (same onboarding as iSEE / UCSCXenaShiny / spatialLIBD):
+#   * beeRapp is a plain single-file Shiny app (NOT an R package):
+#       app.R defines `ui` + `server` and ends with shinyApp(ui, server)
+#       -> the entry RETURNS a shiny.appobj and never calls shiny::runApp().
+#     The shell launches it with shiny::runApp("app"), i.e. exactly what
+#     shiny::runGitHub("beeRapp", "anmabu") does upstream.
+#   * The one thing that must change for an offline bundle: app.R line 1 is
+#       source("install.R", local = TRUE)
+#     install.R installs packages from CRAN/Bioconductor AT RUNTIME (network).
+#     The build strips that single line and bakes the full dependency closure
+#     into rlib/ instead, so first launch needs no network.
+#
+# Notes / gotchas handled here:
+#   * No DESCRIPTION / no `R CMD build`: this is not a package. The dependency
+#     seed is the app's own install.R `deppkgs` list plus the library() calls
+#     in app.R and src/script.R (grDevices is base R and is excluded).
+#   * mixOmics + BiocGenerics are Bioconductor; everything else is CRAN.
+#   * report_files/*.Rmd are rendered with rmarkdown::render(), which needs
+#     PANDOC at runtime. The ShinyApps shell does not bundle pandoc, so the
+#     "generate report" buttons may fail until pandoc is present; the core
+#     analyses are unaffected. Disclosed in the bundle manifest `notes`.
+#   * base-priority packages are excluded from the closure; recommended ones
+#     (Matrix, MASS, survival, lattice, ...) are kept so the bundle is
+#     self-contained.
+
+name: Build app bundle
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to attach bundles to"
+        required: false
+        type: string
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+env:
+  APP_ID: beerapp
+  APP_NAME: beeRapp
+  APP_AUTHOR: "Anne Marie Busch, Irina Kovlyagina, Beat Lutz, Hristo Todorov, Susanne Gerber"
+  APP_DESC: "Automated high-throughput explorative analysis of multivariate behavioral data (clustering, boxplots, PCA, heatmaps, correlations)"
+  APP_HOMEPAGE: "https://github.com/fentouxungui/beeRapp"
+  APP_LICENSE: "GPL-3.0-or-later"
+  R_VERSION: "4.6.1"
+
+jobs:
+  bundle:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, platform: "win-x64" }
+          - { os: macos-14,       platform: "mac-arm64" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+          use-public-rspm: true
+
+      - name: Install build helpers
+        shell: bash
+        run: Rscript -e 'install.packages(c("jsonlite","zip","digest","BiocManager"), repos="https://cloud.r-project.org")'
+
+      - name: Resolve store version
+        shell: bash
+        run: |
+          V="${{ github.event.release.tag_name }}${{ inputs.tag }}"
+          V="${V#v}"
+          if [ -z "$V" ]; then V="0.1.0"; fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Assemble bundle (app/ + rlib/ + manifest.json)
+        shell: Rscript {0}
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bundle <- file.path(getwd(), "bundle")
+          unlink(bundle, recursive = TRUE); dir.create(bundle, recursive = TRUE)
+          appdir <- file.path(bundle, "app"); dir.create(appdir, recursive = TRUE)
+          lib <- file.path(bundle, "rlib"); dir.create(lib, recursive = TRUE)
+
+          # --- 1. copy the app sources verbatim ------------------------------
+          src <- getwd()
+          for (f in c("app.R", "src", "report_files", "example_data", "README.md", "License.md")) {
+            from <- file.path(src, f)
+            if (file.exists(from)) file.copy(from, appdir, recursive = TRUE)
+          }
+          if (!file.exists(file.path(appdir, "app.R"))) stop("app.R missing after copy")
+          if (!file.exists(file.path(appdir, "src", "script.R"))) stop("src/script.R missing after copy")
+
+          # --- 2. strip the runtime package bootstrap (offline bundle) ------
+          app_r <- file.path(appdir, "app.R")
+          txt <- readLines(app_r, warn = FALSE)
+          txt <- txt[!grepl("source(\"install.R\"", txt, fixed = TRUE)]
+          writeLines(txt, app_r)
+
+          # --- 3. install the dependency closure into bundle/rlib -----------
+          repos <- BiocManager::repositories()
+          options(repos = repos)
+
+          # install.R deppkgs + library() calls in app.R / src/script.R.
+          # grDevices is base R and is intentionally not installed here.
+          seed <- c("corrplot", "DT", "data.table", "Hmisc", "ggplot2", "gridExtra",
+                    "officer", "openxlsx", "shiny", "shinydashboard", "sets",
+                    "ggpubr", "pheatmap", "mclust", "mixOmics", "ggrepel",
+                    "stringr", "coin", "NbClust", "rmarkdown", "knitr",
+                    "BiocGenerics", "BiocManager")
+
+          db <- available.packages(repos = repos)
+          cat("available packages:", nrow(db), "\n")
+          closure <- unique(c(seed,
+                     unlist(tools::package_dependencies(seed, db = db, recursive = TRUE))))
+          base_pkgs <- rownames(installed.packages(priority = "base"))
+          closure <- setdiff(closure, base_pkgs)
+          closure <- closure[closure %in% rownames(db)]
+          cat("closure packages to install:", length(closure), "\n")
+          if (length(closure)) {
+            install.packages(closure, lib = lib, repos = repos, type = "binary",
+                             dependencies = FALSE, Ncpus = 2)
+          }
+
+          present <- basename(list.dirs(lib, recursive = FALSE))
+          required <- setdiff(seed, base_pkgs)
+          missing <- setdiff(required, present)
+          if (length(missing)) stop("packages missing from rlib: ", paste(missing, collapse = ", "))
+          cat("rlib packages:", length(present), "\n")
+
+          # --- 4. write manifest.json ---------------------------------------
+          pkgs <- as.data.frame(installed.packages(lib.loc = lib))
+          man <- list(
+            schema = 1L,
+            id = Sys.getenv("APP_ID"), name = Sys.getenv("APP_NAME"), version = Sys.getenv("VERSION"),
+            author = Sys.getenv("APP_AUTHOR"), description = Sys.getenv("APP_DESC"),
+            homepage = Sys.getenv("APP_HOMEPAGE"), license = Sys.getenv("APP_LICENSE"),
+            runtime = "r-shiny", entry = "app/app.R",
+            platform = "${{ matrix.platform }}",
+            r_version = Sys.getenv("R_VERSION"), min_shell_version = "0.1.0",
+            notes = "Plain Shiny app (not an R package). app.R's runtime source(install.R) bootstrap was stripped; the full CRAN/Bioconductor closure is prebuilt in rlib. report_files/*.Rmd need pandoc at runtime (not bundled by the shell).",
+            packages = lapply(seq_len(nrow(pkgs)), function(i) list(
+              name = pkgs$Package[i], version = pkgs$Version[i],
+              path = file.path("rlib", pkgs$Package[i]), source = "cran"))
+          )
+          jsonlite::write_json(man, file.path(bundle, "manifest.json"), pretty = TRUE, auto_unbox = TRUE)
+
+      - name: Zip + sha256
+        shell: Rscript {0}
+        run: |
+          out <- sprintf("%s-%s-%s.zip", Sys.getenv("APP_ID"), Sys.getenv("VERSION"), "${{ matrix.platform }}")
+          bundle <- file.path(getwd(), "bundle")
+          old <- setwd(bundle); on.exit(setwd(old))
+          zip::zipr(out, files = list.files(".", all.files = TRUE, no.. = TRUE))
+          entries <- utils::unzip(out, list = TRUE)$Name
+          if (!any(grepl("^rlib/", entries))) stop("zip is missing rlib/ -- aborting")
+          if (!any(grepl("^app/app[.]R$", entries))) stop("zip is missing app/app.R -- aborting")
+          setwd(old)
+          file.rename(file.path(bundle, out), out)
+          sha <- digest::digest(out, algo = "sha256", file = TRUE)
+          writeLines(sprintf('{"platform":"%s","file":"%s","sha256":"%s","size":%d}',
+                     "${{ matrix.platform }}", out, sha, file.size(out)),
+                     sprintf("meta-%s.json", "${{ matrix.platform }}"))
+          cat("bundle zip size:", file.size(out), "\n")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: |
+            *.zip
+            meta-*.json
+
+  release:
+    needs: bundle
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: artifacts/*.zip
